@@ -1,0 +1,13 @@
+{
+    "database": {
+      "host": "DESKTOP-3BFIOKD.local",
+      "user": "moadm",
+      "password": "p@ssw0rd",
+      "database": "moveout",
+      "multipleStatements": true
+    },
+    "server": {
+      "port": 3000
+    },
+    "jwtSecret": "your_jwt_secret"
+}
