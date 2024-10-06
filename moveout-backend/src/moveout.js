@@ -37,7 +37,7 @@ async function createCustomer(mail, password) {
   Skapa en ny etikett för en kund.
 */
 async function createLabel(customerId, type, isPrivate, textDescription) {
-    console.log("Creating label with", { customerId, type });
+    console.log("Creating label with", { customerId, type, isPrivate, textDescription });
     const sql = "INSERT INTO `label` (customer_id, type, private, description, status) VALUES (?, ?, ?, ?, 'active')";
     try {
         const result = await db.query(sql, [customerId, type, isPrivate, textDescription]);

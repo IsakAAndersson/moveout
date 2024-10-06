@@ -20,8 +20,8 @@ function CreateLabel() {
             const response = await axios.post("http://localhost:3000/labels", {
                 customerId: customerId,
                 type: labelType,
-                description: description,
-                private: isPrivate
+                isPrivate: isPrivate,
+                textDescription: description,
             });
 
             console.log(response.data);
@@ -71,6 +71,5 @@ function CreateLabel() {
         </div>
     );
 }
-
 
 export default CreateLabel;

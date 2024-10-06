@@ -17,15 +17,16 @@ app.get("/protected", verifyToken, (req, res) => {
 
 // Route för att skapa en ny label
 app.post("/labels", async (req, res) => {
-    const { customerId, type } = req.body;
+    console.log("Received request body: ", req.body);
+    const { customerId, type, isPrivate, textDescription } = req.body;
 
-    if (!customerId || !type) {
+    if (!customerId || !type || isPrivate || textDescription) {
         return res.status(400).send({ message: "Missing required fields" });
     }
 
     try {
-        const sql = `INSERT INTO label (type, customer_id, qr_path) VALUES (?, ?, ?)`;
-        const result = await db.query(sql, [type, customerId, ""]);
+        const sql = `INSERT INTO label (type, customer_id, private, description, qr_path) VALUES (?, ?, ?, ?, ?, 'active')`;
+        const result = await db.query(sql, [customerId, type, isPrivate, textDescription, ""]);
 
         const labelId = Number(result.insertId);
         const qrPath = `/description/${labelId}`;

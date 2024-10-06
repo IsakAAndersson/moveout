@@ -27,6 +27,7 @@ const LabelView = () => {
         if (customerId) {
             try {
                 const response = await axios.get(`/customers/${customerId}/labels`);
+                console.log("Fetched labels: ", response.data);
                 setLabels(response.data);
             } catch (error) {
                 console.error("Error fetching labels:", error);
