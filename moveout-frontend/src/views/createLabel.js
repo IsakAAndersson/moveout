@@ -5,23 +5,27 @@ import { useNavigate } from "react-router-dom";
 function CreateLabel() {
     const [customerId, setCustomerId] = useState("");
     const [labelType, setLabelType] = useState("standard");
-    const [description, setDescription] = useState("");
+    const [textDescription, setDescription] = useState("");
     const [isPrivate, setIsPrivate] = useState("public");
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState("");
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log("Customer ID:", customerId);
         console.log("Label Type:", labelType);
-        console.log("Description: ", description);
-        console.log("Privacy: ", isPrivate);
+        console.log("textDescription: ", textDescription);
+        console.log("isPrivate: ", isPrivate);
+
+        const privateValue = isPrivate === "private" ? 1 : 0;
+
         try {
-            const response = await axios.post("http://localhost:3000/labels", {
+            const response = await axios.post(`${apiUrl}/labels`, {
                 customerId: customerId,
                 type: labelType,
-                isPrivate: isPrivate,
-                textDescription: description,
+                isPrivate: privateValue,
+                textDescription: textDescription,
             });
 
             console.log(response.data);
@@ -56,7 +60,7 @@ function CreateLabel() {
                 </label>
                 <label>
                     Description:
-                    <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
+                    <textarea value={textDescription} onChange={(e) => setDescription(e.target.value)} />
                 </label>
                 <label>
                     Privacy:

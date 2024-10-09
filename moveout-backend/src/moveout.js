@@ -33,6 +33,11 @@ async function createCustomer(mail, password) {
     return { customerId: result.insertId, mail };
 }
 
+async function getCustomerIdAndMail() {
+    const sql = "SELECT CONCAT(customer_id, ' ', mail) AS customers FROM customer;";
+    return await db.query(sql);
+}
+
 /*
   Skapa en ny etikett för en kund.
 */
@@ -112,4 +117,5 @@ module.exports = {
     deleteLabel: deleteLabel,
     getLabelsByCustomerId: getLabelsByCustomerId,
     updateLabelDescription: updateLabelDescription,
+    getCustomerIdAndMail: getCustomerIdAndMail,
 };
