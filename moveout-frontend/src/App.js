@@ -5,6 +5,8 @@ import Home from "./views/homepage";
 import CreateLabel from "./views/createLabel";
 import LabelDetail from "./views/labelDetail";
 import LabelView from "./views/labelView";
+import Register from "./views/register";
+import Login from "./views/login";
 
 function App() {
     return (
@@ -15,6 +17,8 @@ function App() {
                     <Route path="/create-label" element={<CreateLabel />} />
                     <Route path="/label/:customerId/:labelId" element={<LabelDetail />} />
                     <Route path="/labels" element={<LabelView />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<Login />} />
                 </Routes>
             </Layout>
         </Router>

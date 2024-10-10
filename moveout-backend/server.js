@@ -12,7 +12,7 @@ const multer = require("multer");
 const path = require("path");
 
 const app = express();
-const secret = "min_jwt";
+const secret = process.env.JWT_SECRET;
 
 app.use(
     cors({
@@ -44,15 +44,11 @@ app.post("/api/register", async (req, res) => {
         if (userCheck.length > 0) {
             return res.status(400).send({ message: "Mail address already in use." });
         }
+
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
-
-        if (password.length < 8) {
-            return res.status(400).send({ message: "Password too short. Must be at least 8 characters." });
-        }
-
         if (!passwordRegex.test(password)) {
             return res.status(400).send({
-                message: "Password must contain at least one lowercase letter, one uppercase letter, and one number.",
+                message: "Password must contain at least one lowercase letter, one uppercase letter, and one number, and be at least 8 characters long.",
             });
         }
 
@@ -62,20 +58,23 @@ app.post("/api/register", async (req, res) => {
         await db.query(sql, [mail, hashedPassword]);
 
         const verificationToken = crypto.randomBytes(32).toString("hex");
-        const verificationLink = `http://localhost:3000/api/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 14);
 
-        await db.query("INSERT INTO verification_tokens (token, email) VALUES (?, ?)", [verificationToken, mail]);
+        await db.query("INSERT INTO verification_tokens (token, email, expiration_date) VALUES (?, ?, ?)", [verificationToken, mail, expirationDate]);
+
+        const verificationLink = `http://localhost:3000/api/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
 
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-                user: "your-email@gmail.com",
-                pass: "your-email-password",
+                user: "moveout@gmail.com",
+                pass: "email-password",
             },
         });
 
         const mailOptions = {
-            from: "your-email@gmail.com",
+            from: "moveout@gmail.com",
             to: mail,
             subject: "Email Verification",
             text: `Click on the following link to verify your email: ${verificationLink}`,

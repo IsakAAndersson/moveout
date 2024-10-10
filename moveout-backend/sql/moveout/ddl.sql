@@ -17,7 +17,8 @@ CREATE TABLE `customer` (
     `status` ENUM('verified', 'unverified'),
     `password` VARCHAR(255),
     
-    PRIMARY KEY (`customer_id`)
+    PRIMARY KEY (`customer_id`),
+    UNIQUE (`mail`)
 );
 
 CREATE TABLE `label` (
@@ -39,4 +40,14 @@ CREATE TABLE `admin` (
     `mail` VARCHAR(80),
 
     PRIMARY KEY (`admin_id`)
+);
+
+CREATE TABLE `verification_tokens` (
+    `verification_id` INTEGER AUTO_INCREMENT NOT NULL,
+    `token` VARCHAR(255) NOT NULL,
+    `mail` VARCHAR(80) NOT NULL,
+    `expiration_date` DATETIME NOT NULL,
+    PRIMARY KEY (`verification_id`),
+    UNIQUE (`token`),
+    FOREIGN KEY (`mail`) REFERENCES `customer`(`mail`) ON DELETE CASCADE
 );

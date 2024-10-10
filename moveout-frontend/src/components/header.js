@@ -18,6 +18,14 @@ function Header() {
                 <Link to="/create-label" className="header-link">
                     Create Label
                 </Link>
+                | |
+                <Link to="/login" className="header-link">
+                    Login
+                </Link>
+                | |
+                <Link to="/register" className="header-link">
+                    Register
+                </Link>
             </nav>
         </header>
     );
