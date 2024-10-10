@@ -26,8 +26,8 @@ CREATE TABLE `label` (
     `customer_id` INTEGER,
     `qr_path` VARCHAR(100),
     `status` ENUM('active', 'deleted'),
-    `description` TEXT,
-    `private` ENUM('private', 'public'),
+    `textDescription` TEXT,
+    `isPrivate` ENUM('private', 'public'),
     
     PRIMARY KEY (`label_id`),
     FOREIGN KEY (`customer_id`) REFERENCES `customer` (`customer_id`)

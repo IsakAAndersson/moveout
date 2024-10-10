@@ -5,7 +5,7 @@ const LabelView = () => {
     const [customers, setCustomers] = useState([]);
     const [selectedCustomerId, setSelectedCustomerId] = useState(null);
     const [labels, setLabels] = useState([]);
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+    const apiUrl = process.env.REACT_APP_API_URL || "/api";
 
     useEffect(() => {
         const fetchCustomers = async () => {
@@ -19,7 +19,7 @@ const LabelView = () => {
         };
 
         fetchCustomers();
-    }, []);
+    }, [apiUrl]);
 
     const handleCustomerChange = async (event) => {
         const customerId = event.target.value;

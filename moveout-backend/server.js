@@ -4,26 +4,36 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("./src/db");
 const config = require("./config/mo/config.json");
-const moveOutRoutes = require("./route/moveout");
 const { verifyToken, logIncomingToConsole } = require("./middleware");
 const nodemailer = require("nodemailer");
 const crypto = require("crypto");
 const moveOut = require("./src/moveout");
+const multer = require("multer");
+const path = require("path");
 
 const app = express();
 const secret = "min_jwt";
 
-app.use(cors());
+app.use(
+    cors({
+        origin: "http://localhost:3001",
+        methods: ["GET", "POST", "PUT", "DELETE"],
+        allowedHeaders: ["Content-Type", "Authorization"],
+    })
+);
 app.use(logIncomingToConsole);
 app.use(express.json());
-app.use("/", moveOutRoutes);
 
-app.get("/protected", verifyToken, (req, res) => {
+app.listen(config.server.port, () => {
+    console.log(`Server running on the beloved port ${config.server.port}`);
+});
+
+app.get("/api/protected", verifyToken, (req, res) => {
     res.status(200).send({ message: "This is a protected route", customerId: req.customerId });
 });
 
 //Registrering
-app.post("/register", async (req, res) => {
+app.post("/api/register", async (req, res) => {
     const { mail, password } = req.body;
     if (!mail || !password) {
         return res.status(400).send({ message: "Mail address and password are required." });
@@ -52,12 +62,12 @@ app.post("/register", async (req, res) => {
         await db.query(sql, [mail, hashedPassword]);
 
         const verificationToken = crypto.randomBytes(32).toString("hex");
-        const verificationLink = `http://localhost:3000/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
+        const verificationLink = `http://localhost:3000/api/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
 
         await db.query("INSERT INTO verification_tokens (token, email) VALUES (?, ?)", [verificationToken, mail]);
 
         const transporter = nodemailer.createTransport({
-            service: "gmail", // Du kan välja den e-posttjänst du vill
+            service: "gmail",
             auth: {
                 user: "your-email@gmail.com",
                 pass: "your-email-password",
@@ -87,7 +97,7 @@ app.post("/register", async (req, res) => {
 });
 
 //verifiering
-app.get("/verify", async (req, res) => {
+app.get("/api/verify", async (req, res) => {
     const { token, email } = req.query;
 
     try {
@@ -97,10 +107,8 @@ app.get("/verify", async (req, res) => {
             return res.status(400).send({ message: "Invalid or expired token." });
         }
 
-        // Uppdatera användarens status till 'verified'
         await db.query('UPDATE customer SET status = "verified" WHERE mail = ?', [email]);
 
-        // Ta bort token efter verifiering
         await db.query("DELETE FROM verification_tokens WHERE email = ?", [email]);
 
         return res.status(200).send({ message: "Email verified successfully!" });
@@ -111,33 +119,39 @@ app.get("/verify", async (req, res) => {
 });
 
 // Route för att skapa en ny label
-app.post("/labels", async (req, res) => {
-    console.log("Received request body: ", req.body);
-    const { customerId, type, isPrivate, textDescription } = req.body;
+app.post("/api/labels", async (req, res) => {
+    console.log("Received data:", JSON.stringify(req.body, null, 2));
+    console.log("Received data raw /api/labels: ", req.body);
+    console.log("NU ÄR VI I app.post");
 
-    if (!customerId || !type || typeof isPrivate === "undefined" || !textDescription) {
-        return res.status(400).send({ message: "Missing required fields" });
-    }
+    const customerId = req.body.customerId;
+    const type = req.body.type;
+    const textDescription = req.body.textDescription;
+    const isPrivate = req.body.isPrivate;
+
+    console.log("1: ", customerId);
+    console.log("2: ", type);
+    console.log("3: ", textDescription);
+    console.log("4: ", isPrivate);
+
+    console.log("Data types app.post('/api/labels'):", {
+        customerId: typeof customerId,
+        type: typeof type,
+        textDescription: typeof textDescription,
+        isPrivate: typeof isPrivate,
+    });
 
     try {
-        const sql = `INSERT INTO label (type, customer_id, private, description, qr_path) VALUES (?, ?, ?, ?, 'active')`;
-        const result = await db.query(sql, [customerId, type, isPrivate, textDescription, ""]);
-
-        const labelId = Number(result.insertId);
-        const qrPath = `/description/${labelId}`;
-
-        const updatedSql = `UPDATE label SET qr_path = ? WHERE label_id = ?`;
-        await db.query(updatedSql, [qrPath, labelId]);
-
-        return res.status(201).send({ message: "Label created successfully!", labelId });
+        const response = await moveOut.createLabel(customerId, type, textDescription, isPrivate);
+        res.status(201).json(response);
     } catch (error) {
         console.error("Error creating label:", error);
-        return res.status(500).send({ message: "Database error" });
+        res.status(500).json({ error: "Failed to create label" });
     }
 });
 
 //description for label
-app.get("/description/:labelId", async (req, res) => {
+app.get("/api/description/:labelId", async (req, res) => {
     const { labelId } = req.params;
 
     try {
@@ -160,7 +174,7 @@ app.get("/description/:labelId", async (req, res) => {
 });
 
 //Get label
-app.get("/labels/:labelId", async (req, res) => {
+app.get("/api/label/:labelId", async (req, res) => {
     const { labelId } = req.params;
 
     try {
@@ -178,12 +192,8 @@ app.get("/labels/:labelId", async (req, res) => {
     }
 });
 
-app.listen(config.server.port, () => {
-    console.log(`Server running on port ${config.server.port}`);
-});
-
 //Get all of a customers' labels
-app.get("/customers/:customerId/labels", async (req, res) => {
+app.get("/api/customers/:customerId/labels", async (req, res) => {
     const { customerId } = req.params;
 
     try {
@@ -196,7 +206,7 @@ app.get("/customers/:customerId/labels", async (req, res) => {
 });
 
 // Update label
-app.put("/labels/:labelId", async (req, res) => {
+app.put("/api/labels/:labelId", async (req, res) => {
     const { labelId } = req.params;
     const { description, type } = req.body;
 
@@ -211,7 +221,7 @@ app.put("/labels/:labelId", async (req, res) => {
 });
 
 // Delete label
-app.delete("/labels/:labelId", async (req, res) => {
+app.delete("/api/labels/:labelId", async (req, res) => {
     const { labelId } = req.params;
 
     try {
@@ -225,7 +235,7 @@ app.delete("/labels/:labelId", async (req, res) => {
 });
 
 // Login
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
     const { mail, password } = req.body;
     console.log("mail and password: ", req.body);
 
@@ -255,5 +265,92 @@ app.post("/login", async (req, res) => {
     } catch (error) {
         console.error("Error during login:", error);
         return res.status(500).send({ message: "Database error." });
+    }
+});
+
+// FRÅN /route/moveout.js
+
+app.get("/api/customers", async (req, res) => {
+    console.log("Got request on /customers (GET).");
+    try {
+        const customers = await moveOut.getAllCustomers();
+        res.status(200).json(customers);
+    } catch (error) {
+        console.error("Error fetching customers", error);
+        res.status(500).json({ message: "Error fetching customers", error });
+    }
+});
+
+app.get("/api/customers/:id", async (req, res) => {
+    const customerId = req.params.id;
+    try {
+        const customer = await moveOut.getCustomerById(customerId);
+        if (!customer) {
+            return res.status(404).json({ message: "Customer not found" });
+        }
+        res.status(200).json(customer);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching customer", error });
+    }
+});
+
+app.get("/api/customers/:id/labels", async (req, res) => {
+    const customerId = req.params.id;
+    try {
+        const labels = await moveOut.getLabelsByCustomerId(customerId); // Implementera denna funktion
+        res.status(200).json(labels);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching labels", error });
+    }
+});
+
+app.post("/api/customers", async (req, res) => {
+    const { mail, status } = req.body;
+    try {
+        const newCustomer = await moveOut.createCustomer(mail, status);
+        res.status(201).json(newCustomer);
+    } catch (error) {
+        res.status(500).json({ message: "Error creating customer", error });
+    }
+});
+
+//Något mög
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, "uploads/"); // Spara filer i 'uploads' mappen
+    },
+    filename: function (req, file, cb) {
+        const ext = path.extname(file.originalname);
+        const filename = Date.now() + ext; // Namnge filen med tidsstämpel
+        cb(null, filename);
+    },
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ["image/jpeg", "image/png", "audio/mpeg", "audio/wav"];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error("Ogiltig filtyp"), false);
+    }
+};
+
+const upload = multer({ storage: storage, fileFilter: fileFilter });
+
+//
+
+app.post("/api/labels/:labelId/description", upload.single("file"), async (req, res) => {
+    const { labelId } = req.params;
+    const { description } = req.body;
+    const file = req.file;
+
+    try {
+        // Skicka vidare beskrivning och filväg till affärslogiken (moveOut.js)
+        const result = await moveOut.updateLabelDescription(labelId, description, file ? `/uploads/${file.filename}` : null);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Error updating description: ", error);
+        res.status(500).json({ message: "Fel vid uppdatering av beskrivning", error });
     }
 });

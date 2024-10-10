@@ -9,26 +9,36 @@ function CreateLabel() {
     const [isPrivate, setIsPrivate] = useState("public");
     const navigate = useNavigate();
     const [errorMessage, setErrorMessage] = useState("");
-    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3000';
+    const apiUrl = process.env.REACT_APP_API_URL || "/api";
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         console.log("Customer ID:", customerId);
         console.log("Label Type:", labelType);
-        console.log("textDescription: ", textDescription);
-        console.log("isPrivate: ", isPrivate);
-
-        const privateValue = isPrivate === "private" ? 1 : 0;
+        console.log("Text Description: ", textDescription);
+        console.log("Is Private: ", isPrivate);
 
         try {
-            const response = await axios.post(`${apiUrl}/labels`, {
-                customerId: customerId,
-                type: labelType,
-                isPrivate: privateValue,
-                textDescription: textDescription,
-            });
+            console.log("Data being sent to the server: ", { customerId, labelType, textDescription, isPrivate });
+            console.log("Sending request to: ", `${apiUrl}/labels`);
+            const response = await axios.post(
+                `${apiUrl}/labels`,
+                {
+                    customerId,
+                    type: labelType,
+                    textDescription: textDescription,
+                    isPrivate: isPrivate,
+                },
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
 
-            console.log(response.data);
+            console.log("RESPONSE CREATELABEL: ", response);
+
+            console.log("Response data createLabel: ", response.data);
             alert("Label created successfully!");
             setErrorMessage("");
 
@@ -71,7 +81,7 @@ function CreateLabel() {
                 </label>
                 <button type="submit">Create Label</button>
             </form>
-            {errorMessage && <p className="error-message">{errorMessage}</p>} {/* Visar felmeddelande */}
+            {errorMessage && <p className="error-message">{errorMessage}</p>}
         </div>
     );
 }

@@ -7,10 +7,11 @@ function LabelDetail() {
     const { customerId, labelId } = useParams();
     const [labelData, setLabelData] = useState(null);
     const [errorMessage, setErrorMessage] = useState("");
+    const apiUrl = process.env.REACT_APP_API_URL || "/api";
 
     useEffect(() => {
         axios
-            .get(`${process.env.REACT_APP_API_URL}/labels/${labelId}`)
+            .get(`${apiUrl}/label/${labelId}`)
             .then((response) => {
                 setLabelData(response.data);
             })
@@ -18,7 +19,7 @@ function LabelDetail() {
                 console.error("Error fetching label data:", error);
                 setErrorMessage("Error fetching label data");
             });
-    }, [labelId]);
+    }, [apiUrl, labelId]);
 
     const handlePrint = () => {
         window.print();
@@ -35,17 +36,17 @@ function LabelDetail() {
             </h3>
             <p>Type: {labelData.type}</p>
 
-            {/* Visa olika bilder beroende på type */}
+            {/* Display different images based on the label type */}
             {labelData.type === "fragile" && <img src="/images/fragile.png" alt="Fragile" />}
             {labelData.type === "heavy" && <img src="/images/heavy.png" alt="Heavy" />}
             {labelData.type === "standard" && <img src="/images/standard.png" alt="Standard" />}
 
-            {/* Visa QR-kod som leder till description-sidan */}
+            {/* Display a QR code that links to the description page */}
             <QRCodeCanvas value={`${process.env.REACT_APP_FRONTEND_URL}/description/${labelId}`} />
 
             {errorMessage && <p className="error-message">{errorMessage}</p>}
 
-            {/* Utskriftsknapp */}
+            {/* Print button */}
             <button onClick={handlePrint}>Print</button>
         </div>
     );

@@ -10,8 +10,13 @@ function Header() {
                 <Link to="/" className="header-link">
                     Home
                 </Link>
+                | |
                 <Link to="/labels" className="header-link">
                     Labels
+                </Link>
+                | |
+                <Link to="/create-label" className="header-link">
+                    Create Label
                 </Link>
             </nav>
         </header>

@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Layout from "./views/layout";
 import Home from "./views/homepage";
 import CreateLabel from "./views/createLabel";
-import LabelDetail from "./components/labelDetail";
+import LabelDetail from "./views/labelDetail";
 import LabelView from "./views/labelView";
 
 function App() {

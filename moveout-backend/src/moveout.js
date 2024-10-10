@@ -41,11 +41,24 @@ async function getCustomerIdAndMail() {
 /*
   Skapa en ny etikett för en kund.
 */
-async function createLabel(customerId, type, isPrivate, textDescription) {
-    console.log("Creating label with", { customerId, type, isPrivate, textDescription });
-    const sql = "INSERT INTO `label` (customer_id, type, private, description, status) VALUES (?, ?, ?, ?, 'active')";
+async function createLabel(customerId, type, textDescription, isPrivate) {
+    console.log("Creating label with", { customerId, type, textDescription, isPrivate });
+    const sql = "INSERT INTO `label` (customer_id, type, textDescription, isPrivate, status) VALUES (?, ?, ?, ?, 'active')";
     try {
-        const result = await db.query(sql, [customerId, type, isPrivate, textDescription]);
+        console.log("Parameters being passed to SQL: ", {
+            customerId: customerId,
+            type: type,
+            textDescription: textDescription,
+            isPrivate: isPrivate,
+            dataTypes: {
+                customerId: typeof customerId,
+                type: typeof type,
+                textDescription: typeof textDescription,
+                isPrivate: typeof isPrivate,
+            },
+        });
+
+        const result = await db.query(sql, [customerId, type, textDescription, isPrivate]);
 
         if (!result || !result.insertId) {
             throw new Error("Label creation failed, no insertId returned.");
@@ -60,7 +73,7 @@ async function createLabel(customerId, type, isPrivate, textDescription) {
         const updateSql = "UPDATE label SET qr_path = ? WHERE label_id = ?";
         await db.query(updateSql, [qrPath, labelId]);
 
-        return { labelId, customerId, type, qrPath };
+        return { labelId, customerId, type, textDescription, isPrivate, qrPath };
     } catch (error) {
         console.error("Failed to create label: ", error);
         throw error;
@@ -96,6 +109,12 @@ async function getLabelsByCustomerId(customerId) {
     return labels;
 }
 
+async function getLabelByLabelId(labelId) {
+    const sql = "SELECT * FROM label WHERE label_id = ?";
+    const result = await db.query(sql, [labelId]);
+    return result;
+}
+
 async function updateLabelDescription(labelId, description, filePath) {
     try {
         const sql = "UPDATE label SET description = ?, file_path = ? WHERE label_id = ?";
@@ -118,4 +137,5 @@ module.exports = {
     getLabelsByCustomerId: getLabelsByCustomerId,
     updateLabelDescription: updateLabelDescription,
     getCustomerIdAndMail: getCustomerIdAndMail,
+    getLabelByLabelId: getLabelByLabelId,
 };
