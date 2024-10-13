@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const bcrypt = require("bcrypt");
@@ -13,6 +14,7 @@ const path = require("path");
 
 const app = express();
 const secret = process.env.JWT_SECRET;
+const emailPassword = process.env.EMAIL_PASS;
 
 app.use(
     cors({
@@ -61,20 +63,21 @@ app.post("/api/register", async (req, res) => {
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() + 14);
 
-        await db.query("INSERT INTO verification_tokens (token, email, expiration_date) VALUES (?, ?, ?)", [verificationToken, mail, expirationDate]);
+        await db.query("INSERT INTO verification_tokens (token, mail, expiration_date) VALUES (?, ?, ?)", [verificationToken, mail, expirationDate]);
 
         const verificationLink = `http://localhost:3000/api/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
+        console.log(emailPassword);
 
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
-                user: "moveout@gmail.com",
-                pass: "email-password",
+                user: "isar23moveout@gmail.com",
+                pass: emailPassword,
             },
         });
 
         const mailOptions = {
-            from: "moveout@gmail.com",
+            from: "isar23moveout@gmail.com",
             to: mail,
             subject: "Email Verification",
             text: `Click on the following link to verify your email: ${verificationLink}`,
@@ -100,7 +103,7 @@ app.get("/api/verify", async (req, res) => {
     const { token, email } = req.query;
 
     try {
-        const result = await db.query("SELECT * FROM verification_tokens WHERE token = ? AND email = ?", [token, email]);
+        const result = await db.query("SELECT * FROM verification_tokens WHERE token = ? AND mail = ?", [token, email]);
 
         if (result.length === 0) {
             return res.status(400).send({ message: "Invalid or expired token." });
@@ -108,7 +111,7 @@ app.get("/api/verify", async (req, res) => {
 
         await db.query('UPDATE customer SET status = "verified" WHERE mail = ?', [email]);
 
-        await db.query("DELETE FROM verification_tokens WHERE email = ?", [email]);
+        await db.query("DELETE FROM verification_tokens WHERE mail = ?", [email]);
 
         return res.status(200).send({ message: "Email verified successfully!" });
     } catch (error) {
@@ -313,15 +316,15 @@ app.post("/api/customers", async (req, res) => {
     }
 });
 
-//Något mög
+//MEDIA
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
-        cb(null, "uploads/"); // Spara filer i 'uploads' mappen
+        cb(null, "uploads/"); // Byt mapp att spara i
     },
     filename: function (req, file, cb) {
         const ext = path.extname(file.originalname);
-        const filename = Date.now() + ext; // Namnge filen med tidsstämpel
+        const filename = Date.now() + ext; //Byt namngivning
         cb(null, filename);
     },
 });

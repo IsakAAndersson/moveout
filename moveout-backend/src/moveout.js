@@ -80,6 +80,15 @@ async function createLabel(customerId, type, textDescription, isPrivate) {
     }
 }
 
+/*async function getPublicLabels() {
+    const sql = "SELECT * FROM label WHERE isPrivate = public";
+    const rows = await db.query(sql);
+    if (rows.length === 0) {
+        throw new Error("No public labels");
+    }
+    return rows
+}*/
+
 async function loginCustomer(mail, password) {
     const sql = "SELECT * FROM customer WHERE mail = ?";
     const rows = await db.query(sql, [mail]);
