@@ -23,6 +23,7 @@ CREATE TABLE `customer` (
 
 CREATE TABLE `label` (
     `label_id` INTEGER AUTO_INCREMENT NOT NULL,
+    `label_name` VARCHAR(50),
     `type` ENUM('fragile', 'heavy', 'standard'),
     `customer_id` INTEGER,
     `qr_path` VARCHAR(100),

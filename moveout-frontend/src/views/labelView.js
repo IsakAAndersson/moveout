@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom"; // Import the Link component
 import axios from "axios";
 
 const LabelView = () => {
@@ -60,7 +61,11 @@ const LabelView = () => {
             ) : (
                 <ul>
                     {labels.map((label) => (
-                        <li key={label.label_id}>{label.type}</li>
+                        <li key={label.label_id}>
+                            <Link to={`/label/${selectedCustomerId}/${label.label_id}`}>
+                                {label.type} - {label.label_name}
+                            </Link>
+                        </li>
                     ))}
                 </ul>
             )}

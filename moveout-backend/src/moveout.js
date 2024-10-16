@@ -41,9 +41,9 @@ async function getCustomerIdAndMail() {
 /*
   Skapa en ny etikett för en kund.
 */
-async function createLabel(customerId, type, textDescription, isPrivate) {
-    console.log("Creating label with", { customerId, type, textDescription, isPrivate });
-    const sql = "INSERT INTO `label` (customer_id, type, textDescription, isPrivate, status) VALUES (?, ?, ?, ?, 'active')";
+async function createLabel(customerId, labelName, type, textDescription, isPrivate) {
+    console.log("Creating label with", { customerId, labelName, type, textDescription, isPrivate });
+    const sql = "INSERT INTO `label` (customer_id, label_name, type, textDescription, isPrivate, status) VALUES (?, ?, ?, ?, ?, 'active')";
     try {
         console.log("Parameters being passed to SQL: ", {
             customerId: customerId,
@@ -58,7 +58,7 @@ async function createLabel(customerId, type, textDescription, isPrivate) {
             },
         });
 
-        const result = await db.query(sql, [customerId, type, textDescription, isPrivate]);
+        const result = await db.query(sql, [customerId, labelName, type, textDescription, isPrivate]);
 
         if (!result || !result.insertId) {
             throw new Error("Label creation failed, no insertId returned.");
@@ -73,7 +73,7 @@ async function createLabel(customerId, type, textDescription, isPrivate) {
         const updateSql = "UPDATE label SET qr_path = ? WHERE label_id = ?";
         await db.query(updateSql, [qrPath, labelId]);
 
-        return { labelId, customerId, type, textDescription, isPrivate, qrPath };
+        return { labelId, customerId, labelName, type, textDescription, isPrivate, qrPath };
     } catch (error) {
         console.error("Failed to create label: ", error);
         throw error;

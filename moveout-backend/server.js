@@ -65,8 +65,7 @@ app.post("/api/register", async (req, res) => {
 
         await db.query("INSERT INTO verification_tokens (token, mail, expiration_date) VALUES (?, ?, ?)", [verificationToken, mail, expirationDate]);
 
-        const verificationLink = `http://localhost:3000/api/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
-        console.log(emailPassword);
+        const verificationLink = `${process.env.FRONTEND_URL}/verify?token=${verificationToken}&email=${encodeURIComponent(mail)}`;
 
         const transporter = nodemailer.createTransport({
             service: "gmail",
@@ -91,10 +90,13 @@ app.post("/api/register", async (req, res) => {
             }
         });
 
-        return res.status(201).send({ message: "User registered successfully! A verification link has been sent to your submitted e-mail address" });
+        return res.status(201).send({
+            success: true,
+            message: "User registered successfully! A verification link has been sent to your submitted e-mail address",
+        });
     } catch (error) {
         console.error("Error during registration:", error);
-        return res.status(500).send({ message: "Database error." });
+        return res.status(500).send({ success: false, message: "Database error." });
     }
 });
 
@@ -103,20 +105,19 @@ app.get("/api/verify", async (req, res) => {
     const { token, email } = req.query;
 
     try {
-        const result = await db.query("SELECT * FROM verification_tokens WHERE token = ? AND mail = ?", [token, email]);
+        const result = await db.query("SELECT * FROM verification_tokens WHERE token = ? AND mail = ? AND expiration_date > NOW()", [token, email]);
 
         if (result.length === 0) {
-            return res.status(400).send({ message: "Invalid or expired token." });
+            return res.status(400).json({ success: false, message: "Invalid or expired token." });
         }
 
         await db.query('UPDATE customer SET status = "verified" WHERE mail = ?', [email]);
-
         await db.query("DELETE FROM verification_tokens WHERE mail = ?", [email]);
 
-        return res.status(200).send({ message: "Email verified successfully!" });
+        return res.status(200).json({ success: true, message: "Email verified successfully!" });
     } catch (error) {
         console.error("Verification error:", error);
-        return res.status(500).send({ message: "Database error." });
+        return res.status(500).json({ success: false, message: "Database error." });
     }
 });
 
@@ -127,24 +128,19 @@ app.post("/api/labels", async (req, res) => {
     console.log("NU ÄR VI I app.post");
 
     const customerId = req.body.customerId;
+    const labelName = req.body.labelName;
     const type = req.body.type;
     const textDescription = req.body.textDescription;
     const isPrivate = req.body.isPrivate;
 
     console.log("1: ", customerId);
-    console.log("2: ", type);
-    console.log("3: ", textDescription);
-    console.log("4: ", isPrivate);
-
-    console.log("Data types app.post('/api/labels'):", {
-        customerId: typeof customerId,
-        type: typeof type,
-        textDescription: typeof textDescription,
-        isPrivate: typeof isPrivate,
-    });
+    console.log("2:", labelName);
+    console.log("3: ", type);
+    console.log("4: ", textDescription);
+    console.log("5: ", isPrivate);
 
     try {
-        const response = await moveOut.createLabel(customerId, type, textDescription, isPrivate);
+        const response = await moveOut.createLabel(customerId, labelName, type, textDescription, isPrivate);
         res.status(201).json(response);
     } catch (error) {
         console.error("Error creating label:", error);
@@ -242,36 +238,40 @@ app.post("/api/login", async (req, res) => {
     console.log("mail and password: ", req.body);
 
     if (!mail || !password) {
-        return res.status(400).send({ message: "Email and password are required." });
+        return res.status(400).send({ success: false, message: "Email and password are required." });
     }
 
     try {
         const user = await db.query("SELECT * FROM customer WHERE mail = ?", [mail]);
 
         if (user.length === 0) {
-            return res.status(400).send({ message: "Invalid email or password." });
+            return res.status(400).send({ success: false, message: "Invalid email or password." });
         }
 
         if (user[0].status !== "verified") {
-            return res.status(400).send({ message: "Email not verified." });
+            return res.status(400).send({ success: false, message: "Email not verified." });
         }
 
         const validPassword = await bcrypt.compare(password, user[0].password);
         if (!validPassword) {
-            return res.status(400).send({ message: "Invalid email or password." });
+            return res.status(400).send({ success: false, message: "Invalid email or password." });
         }
 
         const token = jwt.sign({ userId: user[0].customer_id }, secret, { expiresIn: "1h" });
 
-        return res.status(200).send({ message: "Logged in successfully!", token });
+        return res.status(200).send({ 
+            success: true, 
+            message: "Logged in successfully!", 
+            token,
+            userId: user[0].customer_id
+        });
     } catch (error) {
         console.error("Error during login:", error);
-        return res.status(500).send({ message: "Database error." });
+        return res.status(500).send({ success: false, message: "Database error." });
     }
 });
 
-// FRÅN /route/moveout.js
-
+//Hämta kunder
 app.get("/api/customers", async (req, res) => {
     console.log("Got request on /customers (GET).");
     try {
@@ -283,6 +283,7 @@ app.get("/api/customers", async (req, res) => {
     }
 });
 
+//Hämta kund med id
 app.get("/api/customers/:id", async (req, res) => {
     const customerId = req.params.id;
     try {
@@ -296,6 +297,7 @@ app.get("/api/customers/:id", async (req, res) => {
     }
 });
 
+//Hämta specifik kunds etiketter
 app.get("/api/customers/:id/labels", async (req, res) => {
     const customerId = req.params.id;
     try {
@@ -306,6 +308,7 @@ app.get("/api/customers/:id/labels", async (req, res) => {
     }
 });
 
+/*
 app.post("/api/customers", async (req, res) => {
     const { mail, status } = req.body;
     try {
@@ -314,7 +317,7 @@ app.post("/api/customers", async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Error creating customer", error });
     }
-});
+});*/
 
 //MEDIA
 
@@ -348,7 +351,6 @@ app.post("/api/labels/:labelId/description", upload.single("file"), async (req, 
     const file = req.file;
 
     try {
-        // Skicka vidare beskrivning och filväg till affärslogiken (moveOut.js)
         const result = await moveOut.updateLabelDescription(labelId, description, file ? `/uploads/${file.filename}` : null);
         res.status(200).json(result);
     } catch (error) {

@@ -7,11 +7,15 @@ import LabelDetail from "./views/labelDetail";
 import LabelView from "./views/labelView";
 import Register from "./views/register";
 import Login from "./views/login";
+import Verify from "./views/verify";
+import Notification from "./components/Notification";
+import "./App.css";
 
 function App() {
     return (
         <Router>
             <Layout>
+                <Notification />
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/create-label" element={<CreateLabel />} />
@@ -19,6 +23,7 @@ function App() {
                     <Route path="/labels" element={<LabelView />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/verify" element={<Verify />} />
                 </Routes>
             </Layout>
         </Router>

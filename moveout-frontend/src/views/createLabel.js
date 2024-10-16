@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 function CreateLabel() {
     const [customerId, setCustomerId] = useState("");
+    const [labelName, setLabelName] = useState("");
     const [labelType, setLabelType] = useState("standard");
     const [textDescription, setDescription] = useState("");
     const [isPrivate, setIsPrivate] = useState("public");
@@ -25,6 +26,7 @@ function CreateLabel() {
                 `${apiUrl}/labels`,
                 {
                     customerId,
+                    labelName,
                     type: labelType,
                     textDescription: textDescription,
                     isPrivate: isPrivate,
@@ -59,6 +61,10 @@ function CreateLabel() {
                 <label>
                     Customer ID:
                     <input type="text" value={customerId} onChange={(e) => setCustomerId(e.target.value)} required />
+                </label>
+                <label>
+                    Label Name:
+                    <input type="text" value={labelName} onChange={(e) => setLabelName(e.target.value)} />
                 </label>
                 <label>
                     Label Type:
