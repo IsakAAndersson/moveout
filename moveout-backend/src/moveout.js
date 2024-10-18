@@ -4,6 +4,10 @@
 
 const db = require("./db");
 const bcrypt = require("bcrypt");
+const multer = require('multer');
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
 /*
   Hämta alla kunder från databasen.

@@ -15,6 +15,24 @@ const path = require("path");
 const app = express();
 const secret = process.env.JWT_SECRET;
 const emailPassword = process.env.EMAIL_PASS;
+const storage = multer.memoryStorage();
+
+
+const fileFilter = (req, file, cb) => {
+    if (
+        file.mimetype.startsWith('image/') ||
+        file.mimetype.startsWith('audio/') ||
+        file.mimetype === 'application/pdf'
+    ) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only image, audio, and PDF files are allowed!'), false);
+    }
+};
+
+
+
+const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 app.use(
     cors({
@@ -122,31 +140,37 @@ app.get("/api/verify", async (req, res) => {
 });
 
 // Route för att skapa en ny label
-app.post("/api/labels", async (req, res) => {
-    console.log("Received data:", JSON.stringify(req.body, null, 2));
-    console.log("Received data raw /api/labels: ", req.body);
-    console.log("NU ÄR VI I app.post");
+app.post(
+    "/api/labels",
+    upload.fields([
+        { name: "images", maxCount: 5 },
+        { name: "audio", maxCount: 1 },
+    ]),
+    async (req, res) => {
+        console.log("Received data:", JSON.stringify(req.body, null, 2));
+        console.log("Received files:", req.files);
 
-    const customerId = req.body.customerId;
-    const labelName = req.body.labelName;
-    const type = req.body.type;
-    const textDescription = req.body.textDescription;
-    const isPrivate = req.body.isPrivate;
+        const customerId = req.body.customerId;
+        const labelName = req.body.labelName;
+        const type = req.body.type;
+        const textDescription = req.body.textDescription;
+        const isPrivate = req.body.isPrivate;
 
-    console.log("1: ", customerId);
-    console.log("2:", labelName);
-    console.log("3: ", type);
-    console.log("4: ", textDescription);
-    console.log("5: ", isPrivate);
+        console.log("1: ", customerId);
+        console.log("2:", labelName);
+        console.log("3: ", type);
+        console.log("4: ", textDescription);
+        console.log("5: ", isPrivate);
 
-    try {
-        const response = await moveOut.createLabel(customerId, labelName, type, textDescription, isPrivate);
-        res.status(201).json(response);
-    } catch (error) {
-        console.error("Error creating label:", error);
-        res.status(500).json({ error: "Failed to create label" });
+        try {
+            const response = await moveOut.createLabel(customerId, labelName, type, textDescription, isPrivate);
+            res.status(201).json(response);
+        } catch (error) {
+            console.error("Error creating label:", error);
+            res.status(500).json({ error: "Failed to create label" });
+        }
     }
-});
+);
 
 //description for label
 app.get("/api/description/:labelId", async (req, res) => {
@@ -320,29 +344,6 @@ app.post("/api/customers", async (req, res) => {
     }
 });*/
 
-//MEDIA
-
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, "uploads/"); // Byt mapp att spara i
-    },
-    filename: function (req, file, cb) {
-        const ext = path.extname(file.originalname);
-        const filename = Date.now() + ext; //Byt namngivning
-        cb(null, filename);
-    },
-});
-
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = ["image/jpeg", "image/png", "audio/mpeg", "audio/wav"];
-    if (allowedTypes.includes(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error("Ogiltig filtyp"), false);
-    }
-};
-
-const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 //
 
