@@ -8,14 +8,15 @@ import LabelView from "./views/labelView";
 import Register from "./views/register";
 import Login from "./views/login";
 import Verify from "./views/verify";
-import Notification from "./components/Notification";
-import "./App.css";
+import UserProfile from "./views/userProfile";
+import AdminProfile from "./views/adminProfile";
+import Logout from "./views/logout";
+import LabelDescription from "./views/labelDescription";
 
 function App() {
     return (
         <Router>
             <Layout>
-                <Notification />
                 <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/create-label" element={<CreateLabel />} />
@@ -24,6 +25,10 @@ function App() {
                     <Route path="/register" element={<Register />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/verify" element={<Verify />} />
+                    <Route path="/profile" element={<UserProfile />} />
+                    <Route path="/admin" element={<AdminProfile />} />
+                    <Route path="/logout" element={<Logout />} />
+                    <Route path="/description/:labelId" element={<LabelDescription />} />
                 </Routes>
             </Layout>
         </Router>

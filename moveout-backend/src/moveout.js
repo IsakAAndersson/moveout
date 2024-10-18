@@ -94,17 +94,22 @@ async function loginCustomer(mail, password) {
     const rows = await db.query(sql, [mail]);
 
     if (rows.length === 0) {
-        throw new Error("Customer not found");
+        throw new Error("Incorrect mail or password");
     }
 
     const customer = rows[0];
-    const isMatch = await bcrypt.compare(password, customer.password); // Jämför hashat lösenord
+    const isMatch = await bcrypt.compare(password, customer.password);
 
     if (!isMatch) {
-        throw new Error("Incorrect password");
+        throw new Error("Incorrect mail or password");
     }
 
-    return { customerId: customer.customer_id, mail: customer.mail, status: customer.status };
+    return {
+        customerId: customer.customer_id,
+        mail: customer.mail,
+        status: customer.status,
+        role: customer.role,
+    };
 }
 
 async function deleteLabel(labelId) {
@@ -136,6 +141,27 @@ async function updateLabelDescription(labelId, description, filePath) {
     }
 }
 
+async function updatePassword(customerId, newPassword) {
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const sql = "UPDATE customer SET password = ? WHERE customer_id = ?";
+    await db.query(sql, [hashedPassword, customerId]);
+}
+
+async function deactivateAccount(customerId) {
+    const sql = "UPDATE customer SET status = 'deactivated' WHERE customer_id = ?";
+    await db.query(sql, [customerId]);
+}
+
+async function promoteToAdmin(customerId) {
+    const sql = "UPDATE customer SET role = 'admin' WHERE customer_id = ?";
+    await db.query(sql, [customerId]);
+}
+
+async function getAllPublicLabels() {
+    const sql = "SELECT l.*, c.mail FROM label l JOIN customer c ON l.customer_id = c.customer_id WHERE l.isPrivate = 'public' AND l.status = 'active'";
+    return db.query(sql);
+}
+
 module.exports = {
     getAllCustomers: getAllCustomers,
     getCustomerById: getCustomerById,
@@ -147,4 +173,8 @@ module.exports = {
     updateLabelDescription: updateLabelDescription,
     getCustomerIdAndMail: getCustomerIdAndMail,
     getLabelByLabelId: getLabelByLabelId,
+    updatePassword: updatePassword,
+    deactivateAccount: deactivateAccount,
+    promoteToAdmin: promoteToAdmin,
+    getAllPublicLabels: getAllPublicLabels,
 };

@@ -15,9 +15,17 @@ export default function Login() {
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/login`, { mail: email, password });
             if (response.data.success) {
-                // Store the token and user ID in localStorage or a state management solution
                 localStorage.setItem("token", response.data.token);
-                localStorage.setItem("userId", response.data.userId);
+                localStorage.setItem("customerId", response.data.customerId);
+                localStorage.setItem("userRole", response.data.role);
+
+                // Console logs to verify values in localStorage
+                console.log("Token stored:", localStorage.getItem("token"));
+                console.log("CustomerId stored:", localStorage.getItem("customerId"));
+                console.log("UserRole stored:", localStorage.getItem("userRole"));
+
+                window.dispatchEvent(new Event("loginStateChange"));
+
                 navigate("/", { state: { message: response.data.message } });
             } else {
                 setError(response.data.message);

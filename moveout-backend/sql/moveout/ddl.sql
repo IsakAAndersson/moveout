@@ -16,6 +16,7 @@ CREATE TABLE `customer` (
     `mail` VARCHAR(80) NOT NULL,
     `status` ENUM('verified', 'unverified'),
     `password` VARCHAR(255),
+    `role` ENUM('user', 'admin') DEFAULT 'user',
     
     PRIMARY KEY (`customer_id`),
     UNIQUE (`mail`)

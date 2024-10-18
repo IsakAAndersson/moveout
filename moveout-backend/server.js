@@ -259,11 +259,12 @@ app.post("/api/login", async (req, res) => {
 
         const token = jwt.sign({ userId: user[0].customer_id }, secret, { expiresIn: "1h" });
 
-        return res.status(200).send({ 
-            success: true, 
-            message: "Logged in successfully!", 
+        return res.status(200).send({
+            success: true,
+            message: "Logged in successfully!",
             token,
-            userId: user[0].customer_id
+            customerId: user[0].customer_id,
+            role: user[0].role,
         });
     } catch (error) {
         console.error("Error during login:", error);
