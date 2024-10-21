@@ -118,9 +118,12 @@ export default function CreateLabel() {
         formData.append("type", labelType);
         formData.append("textDescription", textDescription);
         formData.append("isPrivate", isPrivate);
-        images.forEach((image, index) => formData.append(`image${index}`, image));
 
-        if (audio) formData.append("audio", audio);
+        images.forEach((image) => formData.append("images", image));
+
+        if (audio) {
+            formData.append("audio", audio);
+        }
 
         try {
             const response = await axios.post(`${apiUrl}/labels`, formData, {
@@ -201,7 +204,7 @@ export default function CreateLabel() {
                     </button>
                 </div>
                 <div>
-                    <label htmlFor="audio">Audio</label>
+                    <label htmlFor="audio">Upload Audio</label>
                     <input type="file" id="audio" accept="audio/*" onChange={handleAudioChange} />
                 </div>
                 <div>

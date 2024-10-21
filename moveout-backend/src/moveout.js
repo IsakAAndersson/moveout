@@ -1,16 +1,12 @@
-//isar23
-
-"use strict";
-
-const db = require("./db");
-const bcrypt = require("bcrypt");
-const multer = require('multer');
+import db from "./db.js";
+import bcrypt from "bcrypt";
+import multer from "multer";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 /*
-  Hämta alla kunder från databasen.
+    Hämta alla kunder från databasen.
 */
 async function getAllCustomers() {
     const sql = "SELECT * FROM customer";
@@ -18,7 +14,7 @@ async function getAllCustomers() {
 }
 
 /*
-  Hämta en kund baserat på ID.
+    Hämta en kund baserat på ID.
 */
 async function getCustomerById(customerId) {
     const sql = "SELECT * FROM customer WHERE customer_id = ?";
@@ -27,7 +23,7 @@ async function getCustomerById(customerId) {
 }
 
 /*
-  Skapa en ny kund.
+    Skapa en ny kund.
 */
 async function createCustomer(mail, password) {
     const hashedPassword = await bcrypt.hash(password, 10); // Hasha lösenordet med en saltomgång på 10
@@ -43,23 +39,20 @@ async function getCustomerIdAndMail() {
 }
 
 /*
-  Skapa en ny etikett för en kund.
+    Skapa en ny etikett för en kund.
 */
-async function createLabel(customerId, labelName, type, textDescription, isPrivate) {
-    console.log("Creating label with", { customerId, labelName, type, textDescription, isPrivate });
+async function createLabel(customerId, labelName, type, textDescription, isPrivate, imageUrls = [], audioUrl = null) {
+    console.log("Creating label with", { customerId, labelName, type, textDescription, isPrivate, imageUrls, audioUrl });
+
     const sql = "INSERT INTO `label` (customer_id, label_name, type, textDescription, isPrivate, status) VALUES (?, ?, ?, ?, ?, 'active')";
+
     try {
         console.log("Parameters being passed to SQL: ", {
-            customerId: customerId,
-            type: type,
-            textDescription: textDescription,
-            isPrivate: isPrivate,
-            dataTypes: {
-                customerId: typeof customerId,
-                type: typeof type,
-                textDescription: typeof textDescription,
-                isPrivate: typeof isPrivate,
-            },
+            customerId,
+            labelName,
+            type,
+            textDescription,
+            isPrivate,
         });
 
         const result = await db.query(sql, [customerId, labelName, type, textDescription, isPrivate]);
@@ -68,31 +61,49 @@ async function createLabel(customerId, labelName, type, textDescription, isPriva
             throw new Error("Label creation failed, no insertId returned.");
         }
 
-        console.log("Result: ", result);
         const labelId = Number(result.insertId);
-        const qrPath = `/description/${labelId}`;
 
-        console.log("Updating label with qr_path: ", qrPath, " and label_id: ", labelId);
+        const qrCodeUrl = `${process.env.REACT_APP_FRONTEND_URL || "http://localhost:3001"}/description/${labelId}`;
+        console.log("Updating label with qr_path: ", qrCodeUrl, " and label_id: ", labelId);
 
         const updateSql = "UPDATE label SET qr_path = ? WHERE label_id = ?";
-        await db.query(updateSql, [qrPath, labelId]);
+        await db.query(updateSql, [qrCodeUrl, labelId]);
 
-        return { labelId, customerId, labelName, type, textDescription, isPrivate, qrPath };
+        if (imageUrls.length > 0) {
+            const imageInsertPromises = imageUrls.map((url) => {
+                const imageSql = "INSERT INTO label_images (label_id, image_url) VALUES (?, ?)";
+                return db.query(imageSql, [labelId, url]);
+            });
+            await Promise.all(imageInsertPromises);
+            console.log("Images inserted for label:", imageUrls);
+        }
+
+        if (audioUrl) {
+            const audioSql = "INSERT INTO label_audio (label_id, audio_url) VALUES (?, ?)";
+            await db.query(audioSql, [labelId, audioUrl]);
+            console.log("Audio inserted for label:", audioUrl);
+        }
+
+        return {
+            labelId,
+            customerId,
+            labelName,
+            type,
+            textDescription,
+            isPrivate,
+            qrCodeUrl,
+            imageUrls,
+            audioUrl,
+        };
     } catch (error) {
         console.error("Failed to create label: ", error);
         throw error;
     }
 }
 
-/*async function getPublicLabels() {
-    const sql = "SELECT * FROM label WHERE isPrivate = public";
-    const rows = await db.query(sql);
-    if (rows.length === 0) {
-        throw new Error("No public labels");
-    }
-    return rows
-}*/
-
+/*
+    Skapa en ny etikett för en kund.
+*/
 async function loginCustomer(mail, password) {
     const sql = "SELECT * FROM customer WHERE mail = ?";
     const rows = await db.query(sql, [mail]);
@@ -116,31 +127,76 @@ async function loginCustomer(mail, password) {
     };
 }
 
+/*
+    Soft delete på label
+*/
 async function deleteLabel(labelId) {
     const sql = "UPDATE LABEL SET `status` = 'deleted' WHERE `label_id` = ?";
     await db.query(sql, [labelId]);
 }
 
+/*
+    Hämta labels tillhörande kund
+*/
 async function getLabelsByCustomerId(customerId) {
     const sql = "SELECT * FROM label WHERE customer_id = ? AND status = 'active'";
     const labels = await db.query(sql, [customerId]);
     return labels;
 }
 
+/*
+    Hämta specifik label
+*/
 async function getLabelByLabelId(labelId) {
     const sql = "SELECT * FROM label WHERE label_id = ?";
     const result = await db.query(sql, [labelId]);
     return result;
 }
 
-async function updateLabelDescription(labelId, description, filePath) {
+/*
+    Uppdatera description
+*/
+async function updateLabelDescription(labelId, description, imageUrls = [], audioUrl = null, removeImages = false, removeAudio = false) {
     try {
-        const sql = "UPDATE label SET description = ?, file_path = ? WHERE label_id = ?";
-        await db.query(sql, [description, filePath, labelId]);
+        const sql = "UPDATE label SET textDescription = ? WHERE label_id = ?";
+        await db.query(sql, [description, labelId]);
 
-        return { message: "Description and path updated", labelId, description, filePath };
+        if (removeImages) {
+            const deleteImageSql = "DELETE FROM label_images WHERE label_id = ?";
+            await db.query(deleteImageSql, [labelId]);
+            console.log("Alla bilder har tagits bort för label:", labelId);
+        }
+
+        if (imageUrls.length > 0) {
+            const imageInsertPromises = imageUrls.map((url) => {
+                const insertImageSql = "INSERT INTO label_images (label_id, image_url) VALUES (?, ?)";
+                return db.query(insertImageSql, [labelId, url]);
+            });
+            await Promise.all(imageInsertPromises);
+            console.log("Nya bilder har lagts till:", imageUrls);
+        }
+
+        if (removeAudio) {
+            const deleteAudioSql = "DELETE FROM label_audio WHERE label_id = ?";
+            await db.query(deleteAudioSql, [labelId]);
+            console.log("Ljudfil har tagits bort för label:", labelId);
+        }
+
+        if (audioUrl) {
+            const insertAudioSql = "INSERT INTO label_audio (label_id, audio_url) VALUES (?, ?)";
+            await db.query(insertAudioSql, [labelId, audioUrl]);
+            console.log("Ny ljudfil har lagts till:", audioUrl);
+        }
+
+        return {
+            message: "Label beskrivning och filer har uppdaterats",
+            labelId,
+            description,
+            imageUrls,
+            audioUrl,
+        };
     } catch (error) {
-        console.error("Error updating label description:", error);
+        console.error("Fel vid uppdatering av label:", error);
         throw error;
     }
 }
@@ -166,19 +222,19 @@ async function getAllPublicLabels() {
     return db.query(sql);
 }
 
-module.exports = {
-    getAllCustomers: getAllCustomers,
-    getCustomerById: getCustomerById,
-    createCustomer: createCustomer,
-    createLabel: createLabel,
-    loginCustomer: loginCustomer,
-    deleteLabel: deleteLabel,
-    getLabelsByCustomerId: getLabelsByCustomerId,
-    updateLabelDescription: updateLabelDescription,
-    getCustomerIdAndMail: getCustomerIdAndMail,
-    getLabelByLabelId: getLabelByLabelId,
-    updatePassword: updatePassword,
-    deactivateAccount: deactivateAccount,
-    promoteToAdmin: promoteToAdmin,
-    getAllPublicLabels: getAllPublicLabels,
+export default {
+    getAllCustomers,
+    getCustomerById,
+    createCustomer,
+    createLabel,
+    loginCustomer,
+    deleteLabel,
+    getLabelsByCustomerId,
+    updateLabelDescription,
+    getCustomerIdAndMail,
+    getLabelByLabelId,
+    updatePassword,
+    deactivateAccount,
+    promoteToAdmin,
+    getAllPublicLabels,
 };

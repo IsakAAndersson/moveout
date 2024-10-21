@@ -4,12 +4,18 @@
 
 DELETE FROM `customer`;
 DELETE FROM `label`;
-ALTER TABLE `customer` AUTO_INCREMENT = 1;
-ALTER TABLE `label` AUTO_INCREMENT = 1;
 
-
+DROP TABLE IF EXISTS `label_images`;
+DROP TABLE IF EXISTS `label_audio`;
+DROP TABLE IF EXISTS `verification_tokens`
 DROP TABLE IF EXISTS `customer`;
 DROP TABLE IF EXISTS `label`;
+
+ALTER TABLE `customer` AUTO_INCREMENT = 1;
+ALTER TABLE `label` AUTO_INCREMENT = 1;
+ALTER TABLE `verification_tokens` AUTO_INCREMENT = 1;
+ALTER TABLE `label_images` AUTO_INCREMENT = 1;
+ALTER TABLE `label_audio` AUTO_INCREMENT = 1;
 
 CREATE TABLE `customer` (
     `customer_id` INTEGER AUTO_INCREMENT NOT NULL,
@@ -36,14 +42,6 @@ CREATE TABLE `label` (
     FOREIGN KEY (`customer_id`) REFERENCES `customer` (`customer_id`)
 );
 
-CREATE TABLE `admin` (
-    `admin_id` INTEGER AUTO_INCREMENT NOT NULL,
-    `type` ENUM('general', 'super'),
-    `mail` VARCHAR(80),
-
-    PRIMARY KEY (`admin_id`)
-);
-
 CREATE TABLE `verification_tokens` (
     `verification_id` INTEGER AUTO_INCREMENT NOT NULL,
     `token` VARCHAR(255) NOT NULL,
@@ -52,4 +50,20 @@ CREATE TABLE `verification_tokens` (
     PRIMARY KEY (`verification_id`),
     UNIQUE (`token`),
     FOREIGN KEY (`mail`) REFERENCES `customer`(`mail`) ON DELETE CASCADE
+);
+
+CREATE TABLE `label_images` (
+    `image_id` INTEGER AUTO_INCREMENT NOT NULL,
+    `label_id` INTEGER NOT NULL,
+    `image_url` VARCHAR(255) NOT NULL,
+    PRIMARY KEY (`image_id`),
+    FOREIGN KEY (`label_id`) REFERENCES `label` (`label_id`) ON DELETE CASCADE
+);
+
+CREATE TABLE `label_audio` (
+    `audio_id` INTEGER AUTO_INCREMENT NOT NULL,
+    `label_id` INTEGER NOT NULL,
+    `audio_url` VARCHAR(255) NOT NULL,
+    PRIMARY KEY (`audio_id`),
+    FOREIGN KEY (`label_id`) REFERENCES `label` (`label_id`) ON DELETE CASCADE
 );

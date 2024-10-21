@@ -1,5 +1,14 @@
-const mariadb = require("mariadb");
-const config = require("../config/mo/config.json");
+import mariadb from "mariadb";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+import fs from "fs/promises";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const configPath = join(__dirname, "..", "config", "mo", "config.json");
+const configFile = await fs.readFile(configPath, "utf-8");
+const config = JSON.parse(configFile);
 
 const pool = mariadb.createPool({
     host: config.database.host,
@@ -32,4 +41,4 @@ async function query(sql, params) {
     }
 }
 
-module.exports = { query };
+export default { query };

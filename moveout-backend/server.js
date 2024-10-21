@@ -1,46 +1,24 @@
-require("dotenv").config();
+import dotenv from "dotenv";
 import express from "express";
-//import mysql from "mysql2/promise";
 import cors from "cors";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import multer from "multer";
-import dotenv from "dotenv";
-const express = require("express");
-const cors = require("cors");
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const db = require("./src/db");
-const config = require("./config/mo/config.json");
-const { verifyToken, logIncomingToConsole } = require("./middleware");
-const nodemailer = require("nodemailer");
-const crypto = require("crypto");
-const moveOut = require("./src/moveout");
-const multer = require("multer");
-//const path = require("path");
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
+import { verifyToken, logIncomingToConsole } from "./middleware/index.js";
+import moveOut from "./src/moveout.js";
+import db from "./src/db.js";
+import config from "./config/mo/config.json" assert { type: "json" };
+
+dotenv.config();
 
 const app = express();
 const secret = process.env.JWT_SECRET;
 const emailPassword = process.env.EMAIL_PASS;
 const storage = multer.memoryStorage();
-const upload = multer({ storage: multer.memoryStorage() });
-
-dotenv.config();
-
-/*
-const fileFilter = (req, file, cb) => {
-    if (
-        file.mimetype.startsWith('image/') ||
-        file.mimetype.startsWith('audio/') ||
-        file.mimetype === 'application/pdf'
-    ) {
-        cb(null, true);
-    } else {
-        cb(new Error('Only image, audio, and PDF files are allowed!'), false);
-    }
-};
-*/
-
-//const upload = multer({ storage: storage, fileFilter: fileFilter });
+const upload = multer({ storage: storage });
 
 const s3Client = new S3Client({
     region: process.env.AWS_REGION,
@@ -61,14 +39,13 @@ app.use(logIncomingToConsole);
 app.use(express.json());
 
 app.listen(config.server.port, () => {
-    console.log(`Server running on the beloved port ${config.server.port}`);
+    console.log(`Server running on port ${config.server.port}`);
 });
 
 app.get("/api/protected", verifyToken, (req, res) => {
     res.status(200).send({ message: "This is a protected route", customerId: req.customerId });
 });
 
-//Registrering
 app.post("/api/register", async (req, res) => {
     const { mail, password } = req.body;
     if (!mail || !password) {
@@ -134,7 +111,6 @@ app.post("/api/register", async (req, res) => {
     }
 });
 
-//verifiering
 app.get("/api/verify", async (req, res) => {
     const { token, email } = req.query;
 
@@ -155,7 +131,6 @@ app.get("/api/verify", async (req, res) => {
     }
 });
 
-// Route för att skapa en ny label
 app.post(
     "/api/labels",
     upload.fields([
@@ -166,11 +141,7 @@ app.post(
         console.log("Received data:", JSON.stringify(req.body, null, 2));
         console.log("Received files:", req.files);
 
-        const customerId = req.body.customerId;
-        const labelName = req.body.labelName;
-        const type = req.body.type;
-        const textDescription = req.body.textDescription;
-        const isPrivate = req.body.isPrivate;
+        const { customerId, labelName, type, textDescription, isPrivate } = req.body;
 
         try {
             const imageUrls = [];
@@ -205,7 +176,7 @@ app.post(
                 audioUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${audioKey}`;
             }
 
-            const response = await moveOut.createLabel(customerId, labelName, type, textDescription, isPrivate, imageUrls, audioUrl); // Assuming moveOut.createLabel exists
+            const response = await moveOut.createLabel(customerId, labelName, type, textDescription, isPrivate, imageUrls, audioUrl);
             res.status(201).json(response);
         } catch (error) {
             console.error("Error creating label:", error);
@@ -213,6 +184,42 @@ app.post(
         }
     }
 );
+
+app.get("/api/labels/:labelId", async (req, res) => {
+    const labelId = Number(req.params.labelId);
+
+    console.log("labelId: ", labelId);
+
+    try {
+        const [labelRows] = await db.query("SELECT * FROM label WHERE label_id = ?", [labelId]);
+
+        if (labelRows.length === 0) {
+            return res.status(404).json({ error: "Label not found" });
+        }
+
+        console.log("labelRows: ", labelRows);
+
+        const [imageRows] = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [labelId]);
+        console.log("Image Rows:", imageRows);
+
+        const imageUrls = Array.isArray(imageRows) ? imageRows.map((row) => row.image_url) : imageRows && imageRows.image_url ? [imageRows.image_url] : [];
+
+        const [audioRows] = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [labelId]);
+
+        const audioUrl = audioRows && audioRows.length > 0 ? audioRows[0].audio_url : null;
+
+        const labelData = {
+            ...labelRows,
+            imageUrls: imageUrls,
+            audioUrl: audioUrl,
+        };
+
+        res.json(labelData);
+    } catch (error) {
+        console.error("Error fetching label:", error);
+        res.status(500).json({ error: "Failed to fetch label" });
+    }
+});
 
 //description for label
 app.get("/api/description/:labelId", async (req, res) => {
@@ -430,3 +437,5 @@ app.get("/api/labels/:labelId", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch label" });
     }
 });
+
+export default app;

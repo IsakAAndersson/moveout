@@ -24,6 +24,11 @@ function LabelDescription() {
         return <div>Loading...</div>;
     }
 
+    console.log("labelDescription: ", labelData.textDescription);
+    console.log("imageUrl: ", labelData.imageUrls);
+    console.log("audioUrl: ", labelData.audioUrl);
+    console.log("labelData.label", labelData.label);
+
     return (
         <div className="label-description">
             <h1>{labelData.labelName}</h1>
@@ -31,7 +36,7 @@ function LabelDescription() {
             <p>Description: {labelData.textDescription}</p>
             <div>
                 <h2>Images</h2>
-                {labelData.imageUrls && labelData.imageUrls.map((imageUrl, index) => <img key={index} src={imageUrl} alt={`Label image ${index + 1}`} style={{ maxWidth: "200px", margin: "10px" }} />)}
+                {labelData.imageUrls && labelData.imageUrls.map((imageUrl, index) => <img key={index} src={imageUrl} alt={`Label ${index + 1}`} style={{ maxWidth: "200px", margin: "10px" }} />)}
             </div>
             {labelData.audioUrl && (
                 <div>
