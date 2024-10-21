@@ -118,13 +118,8 @@ export default function CreateLabel() {
         formData.append("type", labelType);
         formData.append("textDescription", textDescription);
         formData.append("isPrivate", isPrivate);
-        images.forEach((image) => formData.append("images", image));
+        images.forEach((image, index) => formData.append(`image${index}`, image));
 
-        formData.forEach((value, key) => {
-            console.log(`${key}: ${value}`);
-        });
-
-        console.log("Submitting with Customer Id:", customerId);
         if (audio) formData.append("audio", audio);
 
         try {

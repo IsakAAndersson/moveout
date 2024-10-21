@@ -1,21 +1,20 @@
-
-const mariadb = require('mariadb');
-const config = require('../config/mo/config.json');
+const mariadb = require("mariadb");
+const config = require("../config/mo/config.json");
 
 const pool = mariadb.createPool({
     host: config.database.host,
     user: config.database.user,
     password: config.database.password,
     database: config.database.database,
-    connectionLimit: 5
+    connectionLimit: 5,
 });
 
 pool.getConnection()
-    .then(conn => {
+    .then((conn) => {
         console.log("Successfully connected to the database");
         conn.release();
     })
-    .catch(err => {
+    .catch((err) => {
         console.error("Failed to connect to the database:", err);
     });
 
@@ -34,4 +33,3 @@ async function query(sql, params) {
 }
 
 module.exports = { query };
-

@@ -31,9 +31,7 @@ function LabelDescription() {
             <p>Description: {labelData.textDescription}</p>
             <div>
                 <h2>Images</h2>
-                {labelData.images && labelData.images.map((imageUrl, index) => (
-                    <img key={index} src={imageUrl} alt={`Label image ${index + 1}`} style={{ maxWidth: '200px', margin: '10px' }} />
-                ))}
+                {labelData.imageUrls && labelData.imageUrls.map((imageUrl, index) => <img key={index} src={imageUrl} alt={`Label image ${index + 1}`} style={{ maxWidth: "200px", margin: "10px" }} />)}
             </div>
             {labelData.audioUrl && (
                 <div>
