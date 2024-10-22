@@ -42,7 +42,7 @@ function LabelDescription() {
                 <div>
                     <h2>Audio</h2>
                     <audio controls>
-                        <source src={labelData.audioUrl} type="audio/mpeg" />
+                        <source src={labelData.audioUrl.audio_url} type="audio/mpeg" />
                         Your browser does not support the audio element.
                     </audio>
                 </div>

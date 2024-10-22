@@ -139,8 +139,9 @@ async function deleteLabel(labelId) {
     Hämta labels tillhörande kund
 */
 async function getLabelsByCustomerId(customerId) {
+    const integerCustomerId = Number(customerId);
     const sql = "SELECT * FROM label WHERE customer_id = ? AND status = 'active'";
-    const labels = await db.query(sql, [customerId]);
+    const labels = await db.query(sql, [integerCustomerId]);
     return labels;
 }
 

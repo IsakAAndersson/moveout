@@ -206,12 +206,15 @@ app.get("/api/labels/:labelId", async (req, res) => {
 
         const [audioRows] = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [labelId]);
 
-        const audioUrl = audioRows && audioRows.length > 0 ? audioRows[0].audio_url : null;
+        //const audioUrl = audioRows && audioRows.length > 0 ? audioRows[0].audio_url : null;
+
+        console.log(audioRows);
+        //console.log(audioUrl);
 
         const labelData = {
             ...labelRows,
             imageUrls: imageUrls,
-            audioUrl: audioUrl,
+            audioUrl: audioRows,
         };
 
         res.json(labelData);
@@ -267,6 +270,7 @@ app.get("/api/label/:labelId", async (req, res) => {
 app.get("/api/customers/:customerId/labels", async (req, res) => {
     const { customerId } = req.params;
 
+    console.log("customer ID: ", customerId);
     try {
         const labels = await moveOut.getLabelsByCustomerId(customerId);
         return res.status(200).send(labels);
@@ -413,13 +417,11 @@ app.get("/api/labels/:labelId", async (req, res) => {
     const { labelId } = req.params;
 
     try {
-        const [labelRows] = await db.query("SELECT * FROM label WHERE label_id = ?", [labelId]);
+        const [label] = await db.query("SELECT * FROM label WHERE label_id = ?", [labelId]);
 
-        if (labelRows.length === 0) {
+        if (label.length === 0) {
             return res.status(404).json({ error: "Label not found" });
         }
-
-        const label = labelRows[0];
 
         const [imageRows] = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [labelId]);
 
