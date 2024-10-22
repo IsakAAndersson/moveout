@@ -20,7 +20,7 @@ ALTER TABLE `label_audio` AUTO_INCREMENT = 1;
 CREATE TABLE `customer` (
     `customer_id` INTEGER AUTO_INCREMENT NOT NULL,
     `mail` VARCHAR(80) NOT NULL,
-    `status` ENUM('verified', 'unverified', 'deleted'),
+    `status` ENUM('verified', 'unverified', 'deactivated'),
     `password` VARCHAR(255),
     `role` ENUM('user', 'admin') DEFAULT 'user',
     

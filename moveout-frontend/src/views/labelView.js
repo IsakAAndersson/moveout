@@ -4,10 +4,12 @@ import axios from "axios";
 
 const LabelView = () => {
     const [labels, setLabels] = useState([]);
+    const [errorMessage, setErrorMessage] = useState("");
     const apiUrl = process.env.REACT_APP_API_URL || "/api";
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("customerId");
 
+    // Logga användarens information
     console.log("LabelView User ID: ", userId);
     console.log("LabelView User Role: ", userRole);
 
@@ -15,7 +17,7 @@ const LabelView = () => {
         try {
             let response;
             if (userRole === "admin") {
-                response = await axios.get(`${apiUrl}/labels/public`);
+                response = await axios.get(`${apiUrl}/public/labels`);
             } else {
                 response = await axios.get(`${apiUrl}/customers/${userId}/labels`);
             }
@@ -23,6 +25,7 @@ const LabelView = () => {
             setLabels(response.data);
         } catch (error) {
             console.error("Error fetching labels:", error);
+            setErrorMessage("Failed to fetch labels. Please try again later.");
         }
     }, [apiUrl, userRole, userId]);
 
@@ -33,6 +36,7 @@ const LabelView = () => {
     return (
         <div>
             <h1>Label Overview</h1>
+            {errorMessage && <p className="text-red-500">{errorMessage}</p>}
             {labels.length === 0 ? (
                 <p>No labels found.</p>
             ) : (

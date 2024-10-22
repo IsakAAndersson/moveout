@@ -467,4 +467,60 @@ app.get("/api/labels/:labelId", async (req, res) => {
     }
 });
 
+app.post("/api/promote-to-admin/:customerId", async (req, res) => {
+    const { customerId } = req.params;
+
+    if (!customerId) {
+        return res.status(400).json({ error: "Customer ID is required" });
+    }
+
+    try {
+        await db.query("UPDATE customer SET `role` = 'admin' WHERE `customer_id` = ?", [customerId]);
+
+        const customer = await moveOut.getCustomerById(customerId);
+
+        if (customer && customer.role === "admin") {
+            return res.status(200).json({ message: `Customer ${customerId} successfully promoted to admin` });
+        } else {
+            return res.status(500).json({ error: "Failed to promote customer to admin" });
+        }
+    } catch (error) {
+        console.error("Error promoting to admin:", error);
+        res.status(500).json({ error: "An error occurred while promoting to admin" });
+    }
+});
+
+app.post("/api/deactivate-customer/:customerId", async (req, res) => {
+    const { customerId } = req.params;
+
+    if (!customerId) {
+        return res.status(400).json({ error: "Customer ID is required" });
+    }
+
+    try {
+        await db.query("UPDATE customer SET `status` = 'deactivated' WHERE `customer_id` = ?", [customerId]);
+
+        const customer = await moveOut.getCustomerById(customerId);
+
+        if (customer && customer.status === "deactivated") {
+            return res.status(200).json({ message: `Customer ${customerId} successfully deactivated` });
+        } else {
+            return res.status(500).json({ error: "Failed to deactivate customer" });
+        }
+    } catch (error) {
+        console.error("Error deactivating customer:", error);
+        res.status(500).json({ error: "An error occurred while deactivating the customer" });
+    }
+});
+
+app.get("/api/public/labels", async (req, res) => {
+    try {
+        const labels = await moveOut.getAllPublicLabels();
+        res.status(200).json(labels);
+    } catch (error) {
+        console.error("Error fetching public labels:", error);
+        res.status(500).json({ message: "Failed to fetch public labels" });
+    }
+});
+
 export default app;
