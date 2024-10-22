@@ -2,8 +2,8 @@
 -- ddl for MoveOut
 --
 
-DELETE FROM `customer`;
 DELETE FROM `label`;
+DELETE FROM `customer`;
 
 DROP TABLE IF EXISTS `label_images`;
 DROP TABLE IF EXISTS `label_audio`;
@@ -37,6 +37,7 @@ CREATE TABLE `label` (
     `status` ENUM('active', 'deleted'),
     `textDescription` TEXT,
     `isPrivate` ENUM('private', 'public'),
+    `pin` INTEGER,
     
     PRIMARY KEY (`label_id`),
     FOREIGN KEY (`customer_id`) REFERENCES `customer` (`customer_id`)

@@ -227,20 +227,47 @@ app.get("/api/labels/:labelId", async (req, res) => {
 //description for label
 app.get("/api/description/:labelId", async (req, res) => {
     const { labelId } = req.params;
-
+    const customerId = req.query.customerId;
     try {
-        const sql = `SELECT * FROM label WHERE label_id = ?`;
-        const result = await db.query(sql, [labelId]);
+        const owner = await moveOut.getCustomerByLabelId(labelId);
+        let pinVerified = false;
 
-        if (result.length === 0) {
+        console.log("LabelId: ", labelId);
+        console.log("Owner: ", owner);
+        console.log("CustomerId: ", customerId);
+
+        if (Number(owner) === Number(customerId)) {
+            pinVerified = true;
+        }
+
+        const sql = `
+            SELECT l.*, 
+                GROUP_CONCAT(DISTINCT li.image_url) AS image_urls, 
+                la.audio_url
+            FROM label l
+            LEFT JOIN label_images li ON l.label_id = li.label_id
+            LEFT JOIN label_audio la ON l.label_id = la.label_id
+            WHERE l.label_id = ?
+            GROUP BY l.label_id
+        `;
+        const [result] = await db.query(sql, [labelId]);
+
+        if (!result) {
             return res.status(404).send({ message: "Label not found" });
         }
 
-        res.status(200).send({
-            message: `Description for label ${labelId}`,
-            labelId: result[0].label_id,
-            descriptionPath: result[0].qr_path,
-        });
+        const labelData = {
+            labelId: result.label_id,
+            labelName: result.label_name,
+            type: result.type,
+            textDescription: result.textDescription,
+            imageUrls: result.image_urls ? result.image_urls.split(",") : [],
+            audioUrl: result.audio_url,
+            pinVerified,
+            pin: result.pin,
+        };
+
+        res.status(200).send(labelData);
     } catch (error) {
         console.error("Error fetching label:", error);
         return res.status(500).send({ message: "Database error" });

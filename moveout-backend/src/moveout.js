@@ -44,7 +44,7 @@ async function getCustomerIdAndMail() {
 async function createLabel(customerId, labelName, type, textDescription, isPrivate, imageUrls = [], audioUrl = null) {
     console.log("Creating label with", { customerId, labelName, type, textDescription, isPrivate, imageUrls, audioUrl });
 
-    const sql = "INSERT INTO `label` (customer_id, label_name, type, textDescription, isPrivate, status) VALUES (?, ?, ?, ?, ?, 'active')";
+    const sql = "INSERT INTO `label` (customer_id, label_name, type, textDescription, isPrivate, pin, status) VALUES (?, ?, ?, ?, ?, ?, 'active')";
 
     try {
         console.log("Parameters being passed to SQL: ", {
@@ -54,8 +54,11 @@ async function createLabel(customerId, labelName, type, textDescription, isPriva
             textDescription,
             isPrivate,
         });
-
-        const result = await db.query(sql, [customerId, labelName, type, textDescription, isPrivate]);
+        let pin = null;
+        if (isPrivate === "private") {
+            pin = Math.floor(100000 + Math.random() * 900000).toString();
+        }
+        const result = await db.query(sql, [customerId, labelName, type, textDescription, isPrivate, pin]);
 
         if (!result || !result.insertId) {
             throw new Error("Label creation failed, no insertId returned.");
@@ -91,6 +94,7 @@ async function createLabel(customerId, labelName, type, textDescription, isPriva
             type,
             textDescription,
             isPrivate,
+            pin,
             qrCodeUrl,
             imageUrls,
             audioUrl,
@@ -223,6 +227,12 @@ async function getAllPublicLabels() {
     return db.query(sql);
 }
 
+async function getCustomerByLabelId(labelId) {
+    const sql = "SELECT `customer_id` FROM label WHERE label_id = ?";
+    const res = await db.query(sql, [labelId]);
+    return res[0].customer_id;
+}
+
 export default {
     getAllCustomers,
     getCustomerById,
@@ -238,4 +248,5 @@ export default {
     deactivateAccount,
     promoteToAdmin,
     getAllPublicLabels,
+    getCustomerByLabelId,
 };
