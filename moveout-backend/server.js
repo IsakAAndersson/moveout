@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -191,36 +191,83 @@ app.get("/api/labels/:labelId", async (req, res) => {
     console.log("labelId: ", labelId);
 
     try {
-        const [labelRows] = await db.query("SELECT * FROM label WHERE label_id = ?", [labelId]);
+        const [label] = await db.query("SELECT * FROM label WHERE label_id = ?", [labelId]);
 
-        if (labelRows.length === 0) {
+        console.log("Raw Label Rows:", JSON.stringify(label, null, 2));
+
+        if (!label || label.length === 0) {
+            console.log("No label found for id:", labelId);
             return res.status(404).json({ error: "Label not found" });
         }
 
-        console.log("labelRows: ", labelRows);
-
         const [imageRows] = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [labelId]);
-        console.log("Image Rows:", imageRows);
+        console.log("Raw Image Rows:", JSON.stringify(imageRows, null, 2));
 
-        const imageUrls = Array.isArray(imageRows) ? imageRows.map((row) => row.image_url) : imageRows && imageRows.image_url ? [imageRows.image_url] : [];
+        let imageUrls = [];
+        if (Array.isArray(imageRows)) {
+            imageUrls = imageRows.map((row) => row.image_url);
+        } else if (imageRows && imageRows.image_url) {
+            imageUrls = [imageRows.image_url];
+        }
+
+        console.log("Processed imageUrls:", JSON.stringify(imageUrls, null, 2));
 
         const [audioRows] = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [labelId]);
+        console.log("Raw Audio Rows:", JSON.stringify(audioRows, null, 2));
 
-        //const audioUrl = audioRows && audioRows.length > 0 ? audioRows[0].audio_url : null;
+        let audioUrl = null;
+        if (Array.isArray(audioRows) && audioRows.length > 0) {
+            audioUrl = audioRows[0].audio_url;
+        } else if (audioRows && audioRows.audio_url) {
+            audioUrl = audioRows.audio_url;
+        }
 
-        console.log(audioRows);
-        //console.log(audioUrl);
+        console.log("Processed audioUrl:", audioUrl);
+
+        if (!label) {
+            console.log("Label data is undefined after processing");
+            return res.status(500).json({ error: "Failed to process label data" });
+        }
 
         const labelData = {
-            ...labelRows,
+            label_id: label.label_id,
+            label_name: label.label_name,
+            type: label.type,
+            customer_id: label.customer_id,
+            qr_path: label.qr_path,
+            status: label.status,
+            textDescription: label.textDescription,
+            isPrivate: label.isPrivate,
+            pin: label.pin,
             imageUrls: imageUrls,
-            audioUrl: audioRows,
+            audioUrl: audioUrl,
         };
+
+        console.log("Sending label data:", JSON.stringify(labelData, null, 2));
 
         res.json(labelData);
     } catch (error) {
         console.error("Error fetching label:", error);
-        res.status(500).json({ error: "Failed to fetch label" });
+        res.status(500).json({ error: "Failed to fetch label", details: error.message });
+    }
+});
+
+//Get label
+app.get("/api/label/:labelId", async (req, res) => {
+    const { labelId } = req.params;
+
+    try {
+        const sql = `SELECT * FROM label WHERE label_id = ?`;
+        const result = await db.query(sql, [labelId]);
+
+        if (result.length === 0) {
+            return res.status(404).send({ message: "Label not found" });
+        }
+
+        return res.status(200).send(result[0]);
+    } catch (error) {
+        console.error("Error fetching label:", error);
+        return res.status(500).send({ message: "Database error" });
     }
 });
 
@@ -274,25 +321,6 @@ app.get("/api/description/:labelId", async (req, res) => {
     }
 });
 
-//Get label
-app.get("/api/label/:labelId", async (req, res) => {
-    const { labelId } = req.params;
-
-    try {
-        const sql = `SELECT * FROM label WHERE label_id = ?`;
-        const result = await db.query(sql, [labelId]);
-
-        if (result.length === 0) {
-            return res.status(404).send({ message: "Label not found" });
-        }
-
-        return res.status(200).send(result[0]);
-    } catch (error) {
-        console.error("Error fetching label:", error);
-        return res.status(500).send({ message: "Database error" });
-    }
-});
-
 //Get all of a customers' labels
 app.get("/api/customers/:customerId/labels", async (req, res) => {
     const { customerId } = req.params;
@@ -308,31 +336,99 @@ app.get("/api/customers/:customerId/labels", async (req, res) => {
 });
 
 // Update label
-app.put("/api/labels/:labelId", async (req, res) => {
-    const { labelId } = req.params;
-    const { description, type } = req.body;
+app.put(
+    "/api/labels/:labelId",
+    upload.fields([
+        { name: "images", maxCount: 5 },
+        { name: "audio", maxCount: 1 },
+    ]),
+    async (req, res) => {
+        const labelId = req.params.labelId;
+        const { labelName, type, textDescription, isPrivate } = req.body;
 
-    try {
-        const sql = "UPDATE label SET description = ?, type = ? WHERE label_id = ?";
-        await db.query(sql, [description, type, labelId]);
-        return res.status(200).send({ message: "Label updated successfully!" });
-    } catch (err) {
-        console.error("Error updating label:", err);
-        return res.status(500).send({ message: "Database error" });
+        console.log("Req body: ", req.body);
+        console.log("app.put('/api/labels/:labelId...: ", labelName);
+
+        try {
+            const label = await moveOut.getLabelByLabelId(labelId);
+
+            console.log("Server.js app.put('/api/labels/:labelId... :", label);
+
+            if (!label) {
+                return res.status(404).json({ message: "Label not found" });
+            }
+
+            console.log(label);
+            label.label_name = labelName;
+            label.type = type;
+            label.textDescription = textDescription;
+            label.isPrivate = isPrivate;
+
+            if (req.files["images"]) {
+                const uploadedImages = req.files["images"].map((file) => file.path);
+                label.imageUrls = uploadedImages;
+            }
+
+            if (req.files["audio"]) {
+                const audioFile = req.files["audio"][0].path;
+                label.audioUrl = audioFile;
+            }
+
+            const sql = "UPDATE `label` SET label_name = ?, type = ?, textDescription = ?, isPrivate = ? WHERE label_id = ?";
+            await db.query(sql, [labelName, type, textDescription, isPrivate, labelId]);
+
+            res.json({ message: "Label updated successfully", label });
+        } catch (error) {
+            console.error("Error updating label:", error);
+            res.status(500).json({ message: "There was an error updating the label" });
+        }
     }
-});
+);
 
 // Delete label
-app.delete("/api/labels/:labelId", async (req, res) => {
+app.post("/api/delete/label/:labelId", async (req, res) => {
     const { labelId } = req.params;
 
     try {
-        const sql = "UPDATE label SET status = 'deleted' WHERE label_id = ?";
-        await db.query(sql, [labelId]);
-        return res.status(200).send({ message: "Label deleted successfully!" });
+        const [images] = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [labelId]);
+        const [audio] = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [labelId]);
+
+        if (images && images.length > 0) {
+            for (const image of images) {
+                const imageUrl = image.image_url;
+                const key = imageUrl.split(`${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`)[1];
+
+                await s3Client.send(
+                    new DeleteObjectCommand({
+                        Bucket: process.env.S3_BUCKET_NAME,
+                        Key: key,
+                    })
+                );
+            }
+        } else {
+            console.log("No images found for labelId:", labelId);
+        }
+
+        if (audio && audio.length > 0) {
+            const audioUrl = audio[0].audio_url;
+            const audioKey = audioUrl.split(`${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`)[1];
+
+            await s3Client.send(
+                new DeleteObjectCommand({
+                    Bucket: process.env.S3_BUCKET_NAME,
+                    Key: audioKey,
+                })
+            );
+        } else {
+            console.log("No audio found for labelId:", labelId);
+        }
+
+        await db.query("UPDATE label SET status = 'deleted' WHERE label_id = ?", [labelId]);
+
+        return res.status(200).send({ message: "Label and associated media deleted successfully!" });
     } catch (err) {
-        console.error("Error deleting label:", err);
-        return res.status(500).send({ message: "Database error" });
+        console.error("Error deleting label and media:", err);
+        return res.status(500).send({ message: "Database or S3 error occurred" });
     }
 });
 

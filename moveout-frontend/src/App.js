@@ -12,6 +12,8 @@ import UserProfile from "./views/userProfile";
 import AdminProfile from "./views/adminProfile";
 import Logout from "./views/logout";
 import LabelDescription from "./views/labelDescription";
+import DeleteLabel from "./views/deleteLabel";
+import EditLabel from "./views/editLabel";
 
 function App() {
     return (
@@ -29,6 +31,8 @@ function App() {
                     <Route path="/admin" element={<AdminProfile />} />
                     <Route path="/logout" element={<Logout />} />
                     <Route path="/description/:labelId" element={<LabelDescription />} />
+                    <Route path="/deleteLabel/:labelId/:labelName" element={<DeleteLabel />} />
+                    <Route path="/editLabel/:labelId/" element={<EditLabel />} />
                 </Routes>
             </Layout>
         </Router>

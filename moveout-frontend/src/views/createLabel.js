@@ -42,13 +42,15 @@ export default function CreateLabel() {
         setUserRole(storedUserRole || "");
     }, [fetchCustomers]);
 
-    useEffect(() => {
-        console.log("Current customerId:", customerId);
-        console.log("Current userRole:", userRole);
-    }, [customerId, userRole]);
-
     const handleImageChange = (e) => {
-        setImages([...e.target.files]);
+        const selectedImages = Array.from(e.target.files);
+
+        if (selectedImages && selectedImages.length + images.length > 5) {
+            alert("You can only upload up to 5 images.");
+            return;
+        }
+
+        setImages([...images, ...selectedImages]);
     };
 
     const handleAudioChange = (e) => {

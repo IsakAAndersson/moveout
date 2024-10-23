@@ -9,7 +9,6 @@ const LabelView = () => {
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("customerId");
 
-    // Logga användarens information
     console.log("LabelView User ID: ", userId);
     console.log("LabelView User Role: ", userRole);
 
@@ -33,6 +32,16 @@ const LabelView = () => {
         fetchLabels();
     }, [fetchLabels]);
 
+    const handleDelete = async (labelId) => {
+        try {
+            await axios.post(`${apiUrl}/delete/label/${labelId}`);
+            setLabels(labels.filter((label) => label.label_id !== labelId));
+        } catch (error) {
+            console.error("Error deleting label:", error);
+            setErrorMessage("Failed to delete label. Please try again later.");
+        }
+    };
+
     return (
         <div>
             <h1>Label Overview</h1>
@@ -47,6 +56,14 @@ const LabelView = () => {
                                 {label.type} - {label.label_name}
                             </Link>
                             {userRole === "admin" && ` - Customer: ${label.mail}`}
+                            <div>
+                                <Link to={`/editLabel/${label.label_id}`}>
+                                    <button className="ml-4 bg-blue-500 text-white py-1 px-2 rounded">Edit Label</button>
+                                </Link>
+                                <Link to={`/deleteLabel/${label.label_id}/${label.label_name}`}>
+                                    <button className="ml-2 bg-red-500 text-white py-1 px-2 rounded">Delete Label</button>
+                                </Link>
+                            </div>
                         </li>
                     ))}
                 </ul>
