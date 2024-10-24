@@ -16,6 +16,7 @@ export default function EditLabel() {
     const [isRecording, setIsRecording] = useState(false);
     const videoRef = useRef(null);
     const mediaRecorderRef = useRef(null);
+    const mediaStreamRef = useRef(null);
     const [errorMessage, setErrorMessage] = useState("");
 
     useEffect(() => {
@@ -55,13 +56,15 @@ export default function EditLabel() {
         setImages((prevImages) => [...prevImages, ...selectedImages]);
     };
 
-    const handleRemoveImage = (index) => {
+    const handleRemoveImage = async (index) => {
         setImages((prevImages) => prevImages.filter((_, i) => i !== index));
+        await axios.post(`${apiUrl}/delete-images/${labelId}`)
     };
 
     const startCamera = async () => {
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            mediaStreamRef.current = mediaStream;
             videoRef.current.srcObject = mediaStream;
             videoRef.current.style.display = "block";
         } catch (error) {
@@ -69,10 +72,11 @@ export default function EditLabel() {
             setErrorMessage("Error accessing camera. Please check your permissions.");
         }
     };
-
+    
     const stopCamera = () => {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach((track) => track.stop()); // Stop all tracks in the mediaStream
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+            mediaStreamRef.current = null;
             videoRef.current.srcObject = null;
             videoRef.current.style.display = "none";
         }
@@ -211,7 +215,7 @@ export default function EditLabel() {
                                 <div key={index}>
                                     {typeof image === "string" ? <img src={image} alt={`Label ${index + 1}`} style={{ width: "100px", height: "100px", objectFit: "cover" }} /> : <span>{image.name}</span>}
                                     <button type="button" onClick={() => handleRemoveImage(index)}>
-                                        Remove
+                                        Remove Current Images
                                     </button>
                                 </div>
                             ))}

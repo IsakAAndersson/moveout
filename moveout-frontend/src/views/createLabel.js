@@ -18,6 +18,11 @@ export default function CreateLabel() {
     const [userRole, setUserRole] = useState("");
     const videoRef = useRef(null);
     const mediaRecorderRef = useRef(null);
+    const mediaStreamRef = useRef(null);
+    const recordingTimeoutRef = useRef(null);
+
+    const maxRecordingTime = 60000;
+    const maxImages = 5;
 
     const fetchCustomers = useCallback(async () => {
         try {
@@ -31,8 +36,6 @@ export default function CreateLabel() {
     useEffect(() => {
         const storedCustomerId = localStorage.getItem("customerId");
         const storedUserRole = localStorage.getItem("userRole");
-        console.log("Stored Customer ID:", storedCustomerId);
-        console.log("Stored User Role:", storedUserRole);
 
         if (storedUserRole === "user" && storedCustomerId) {
             setCustomerId(storedCustomerId);
@@ -45,8 +48,8 @@ export default function CreateLabel() {
     const handleImageChange = (e) => {
         const selectedImages = Array.from(e.target.files);
 
-        if (selectedImages && selectedImages.length + images.length > 5) {
-            alert("You can only upload up to 5 images.");
+        if (selectedImages.length + images.length > maxImages) {
+            alert(`You can only upload up to ${maxImages} images.`);
             return;
         }
 
@@ -54,22 +57,27 @@ export default function CreateLabel() {
     };
 
     const handleAudioChange = (e) => {
-        setAudio(e.target.files[0]);
+        if (e.target.files.length > 0) {
+            setAudio(e.target.files[0]);
+        }
     };
 
     const startCamera = async () => {
         try {
             const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            mediaStreamRef.current = mediaStream;
             videoRef.current.srcObject = mediaStream;
             videoRef.current.style.display = "block";
         } catch (error) {
             console.error("Error accessing camera:", error);
+            setErrorMessage("Error accessing camera. Please check your permissions.");
         }
     };
 
     const stopCamera = () => {
-        if (mediaStream) {
-            mediaStream.getTracks().forEach((track) => track.stop()); // Stop all tracks in the mediaStream
+        if (mediaStreamRef.current) {
+            mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+            mediaStreamRef.current = null;
             videoRef.current.srcObject = null;
             videoRef.current.style.display = "none";
         }
@@ -106,6 +114,10 @@ export default function CreateLabel() {
 
                 mediaRecorder.start();
                 setIsRecording(true);
+
+                recordingTimeoutRef.current = setTimeout(() => {
+                    stopRecording();
+                }, maxRecordingTime);
             })
             .catch((error) => {
                 console.error("Error accessing microphone:", error);
@@ -113,8 +125,11 @@ export default function CreateLabel() {
     };
 
     const stopRecording = () => {
-        mediaRecorderRef.current.stop();
-        setIsRecording(false);
+        if (mediaRecorderRef.current) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+        clearTimeout(recordingTimeoutRef.current);
     };
 
     const handleSubmit = async (e) => {
@@ -123,6 +138,7 @@ export default function CreateLabel() {
             setErrorMessage("Customer ID is required");
             return;
         }
+
         const formData = new FormData();
         formData.append("customerId", customerId);
         formData.append("labelName", labelName);
@@ -202,35 +218,35 @@ export default function CreateLabel() {
                     </select>
                 </div>
                 <div>
-                    <label htmlFor="images">Images</label>
+                    <label htmlFor="images">Upload Images (max 5)</label>
                     <input type="file" id="images" accept="image/*" multiple onChange={handleImageChange} />
-                </div>
-                <div>
-                    <button type="button" onClick={startCamera}>
-                        Start Camera
-                    </button>
-                    <video ref={videoRef} style={{ display: "none" }} autoPlay />
-                    <button type="button" onClick={takePhoto}>
-                        Take Photo
-                    </button>
                 </div>
                 <div>
                     <label htmlFor="audio">Upload Audio</label>
                     <input type="file" id="audio" accept="audio/*" onChange={handleAudioChange} />
                 </div>
                 <div>
-                    {!isRecording ? (
-                        <button type="button" onClick={startRecording}>
-                            Start Recording
-                        </button>
-                    ) : (
-                        <button type="button" onClick={stopRecording}>
-                            Stop Recording
-                        </button>
-                    )}
+                    <button type="button" onClick={startCamera}>
+                        Open Camera
+                    </button>
+                    <video ref={videoRef} style={{ display: "none" }} autoPlay />
+                    <button type="button" onClick={takePhoto}>
+                        Take Photo
+                    </button>
+                    <button type="button" onClick={stopCamera}>
+                        Close Camera
+                    </button>
+                </div>
+                <div>
+                    <button type="button" onClick={startRecording} disabled={isRecording}>
+                        Start Recording
+                    </button>
+                    <button type="button" onClick={stopRecording} disabled={!isRecording}>
+                        Stop Recording
+                    </button>
                 </div>
                 <button type="submit">Create Label</button>
-                {errorMessage && <p className="error-message">{errorMessage}</p>}
+                {errorMessage && <p className="error">{errorMessage}</p>}
             </form>
         </div>
     );

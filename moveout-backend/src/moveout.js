@@ -222,9 +222,15 @@ async function promoteToAdmin(customerId) {
     await db.query(sql, [customerId]);
 }
 
-async function getAllPublicLabels() {
-    const sql = "SELECT l.*, c.mail FROM label l JOIN customer c ON l.customer_id = c.customer_id WHERE l.isPrivate = 'public' AND l.status = 'active'";
-    return db.query(sql);
+async function getAllPublicLabels(customerId) {
+    const sql = `
+        SELECT l.*, c.mail 
+        FROM label l 
+        JOIN customer c ON l.customer_id = c.customer_id 
+        WHERE (l.isPrivate = 'public' AND l.status = 'active') 
+        OR (l.customer_id = ? AND l.status = 'active')
+    `;
+    return db.query(sql, [customerId]);
 }
 
 async function getCustomerByLabelId(labelId) {

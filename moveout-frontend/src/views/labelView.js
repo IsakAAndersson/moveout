@@ -16,7 +16,7 @@ const LabelView = () => {
         try {
             let response;
             if (userRole === "admin") {
-                response = await axios.get(`${apiUrl}/public/labels`);
+                response = await axios.get(`${apiUrl}/public/labels/${userId}`);
             } else {
                 response = await axios.get(`${apiUrl}/customers/${userId}/labels`);
             }
@@ -32,7 +32,7 @@ const LabelView = () => {
         fetchLabels();
     }, [fetchLabels]);
 
-    const handleDelete = async (labelId) => {
+    /*const handleDelete = async (labelId) => {
         try {
             await axios.post(`${apiUrl}/delete/label/${labelId}`);
             setLabels(labels.filter((label) => label.label_id !== labelId));
@@ -40,7 +40,7 @@ const LabelView = () => {
             console.error("Error deleting label:", error);
             setErrorMessage("Failed to delete label. Please try again later.");
         }
-    };
+    };*/
 
     return (
         <div>

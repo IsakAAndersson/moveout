@@ -647,13 +647,28 @@ app.post("/api/deactivate-customer/:customerId", async (req, res) => {
     }
 });
 
-app.get("/api/public/labels", async (req, res) => {
+app.get("/api/public/labels/:customerId", async (req, res) => {
     try {
-        const labels = await moveOut.getAllPublicLabels();
+        const customerId = req.params.customerId;
+        const labels = await moveOut.getAllPublicLabels(customerId);
         res.status(200).json(labels);
     } catch (error) {
         console.error("Error fetching public labels:", error);
         res.status(500).json({ message: "Failed to fetch public labels" });
+    }
+});
+
+app.post("/api/delete-images/:labelId", async (req, res) => {
+    const labelId = req.params.labelId;
+    console.log("delete-images - Label ID: ", labelId);
+
+    const sql = "DELETE FROM `label_images` WHERE label_id = ?";
+    try {
+        await db.query(sql, [labelId]);
+        res.status(200).json({ message: "Images deleted successfully." });
+    } catch (error) {
+        console.error("Error deleting images: ", error);
+        res.status(500).json({ message: "Failed to delete images" });
     }
 });
 
