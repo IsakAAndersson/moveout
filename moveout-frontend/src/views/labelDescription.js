@@ -21,6 +21,7 @@ function LabelDescription() {
             })
             .then((response) => {
                 const data = response.data;
+
                 setLabelData({
                     labelId: Number(data.labelId),
                     labelName: String(data.labelName),
@@ -54,27 +55,26 @@ function LabelDescription() {
         return <div>Loading...</div>;
     }
 
-    console.log("LabelData ", labelData);
-
     return (
         <div className="label-description">
-            <h1>{labelData.labelName}</h1>
-            <p>Type: {labelData.type}</p>
-            <p>Description: {labelData.textDescription}</p>
-
-            {isPinVerified ? (
+            {labelData.pin === 'null' || isPinVerified ? (
                 <div>
-                    <h2>Images</h2>
-                    {labelData.imageUrls && labelData.imageUrls.map((imageUrl, index) => <img key={index} src={imageUrl} alt={`Label ${index + 1}`} style={{ maxWidth: "200px", margin: "10px" }} />)}
-                    {labelData.audioUrl && (
-                        <div>
-                            <h2>Audio</h2>
-                            <audio controls>
-                                <source src={labelData.audioUrl} type="audio/mpeg" />
-                                Your browser does not support the audio element.
-                            </audio>
-                        </div>
-                    )}
+                    <h1>{labelData.labelName}</h1>
+                    <p>Type: {labelData.type}</p>
+                    <p>Description: {labelData.textDescription}</p>
+                    <div>
+                        <h2>Images</h2>
+                        {labelData.imageUrls && labelData.imageUrls.map((imageUrl, index) => <img key={index} src={imageUrl} alt={`Label ${index + 1}`} style={{ maxWidth: "200px", margin: "10px" }} />)}
+                        {labelData.audioUrl && (
+                            <div>
+                                <h2>Audio</h2>
+                                <audio controls>
+                                    <source src={labelData.audioUrl} type="audio/mpeg" />
+                                    Your browser does not support the audio element.
+                                </audio>
+                            </div>
+                        )}
+                    </div>
                 </div>
             ) : (
                 <div>

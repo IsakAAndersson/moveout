@@ -337,6 +337,7 @@ app.get("/api/customers/:customerId/labels", async (req, res) => {
 });
 
 // Update label
+
 app.put(
     "/api/labels/:labelId",
     upload.fields([
@@ -345,34 +346,70 @@ app.put(
     ]),
     async (req, res) => {
         const labelId = req.params.labelId;
-        const { labelName, type, textDescription, isPrivate } = req.body;
-
-        console.log("Req body: ", req.body);
-        console.log("app.put('/api/labels/:labelId...: ", labelName);
+        const { customerId, labelName, type, textDescription, isPrivate } = req.body;
 
         try {
             const label = await moveOut.getLabelByLabelId(labelId);
-
-            console.log("Server.js app.put('/api/labels/:labelId... :", label);
 
             if (!label) {
                 return res.status(404).json({ message: "Label not found" });
             }
 
-            console.log(label);
+            label.customer_id = customerId;
             label.label_name = labelName;
             label.type = type;
             label.textDescription = textDescription;
             label.isPrivate = isPrivate;
 
-            if (req.files["images"]) {
-                const uploadedImages = req.files["images"].map((file) => file.path);
-                label.imageUrls = uploadedImages;
+            if (req.files && req.files["images"]) {
+                let uploadedImages = req.files["images"];
+
+                if (!Array.isArray(uploadedImages)) {
+                    uploadedImages = [uploadedImages];
+                }
+
+                const uploadedImageUrls = [];
+                for (let i = 0; i < uploadedImages.length; i++) {
+                    const file = uploadedImages[i];
+                    const key = `labels/${label.customer_id}/${Date.now()}_${i}.${file.originalname.split(".").pop()}`;
+
+                    await s3Client.send(
+                        new PutObjectCommand({
+                            Bucket: process.env.S3_BUCKET_NAME,
+                            Key: key,
+                            Body: file.buffer,
+                            ContentType: file.mimetype,
+                        })
+                    );
+
+                    const imageUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+                    uploadedImageUrls.push(imageUrl);
+
+                    // Insert new image URL into the database
+                    await db.query("INSERT INTO label_images (label_id, image_url) VALUES (?, ?)", [labelId, imageUrl]);
+                }
+
+                label.imageUrls = uploadedImageUrls;
+                console.log("Images uploaded:", uploadedImageUrls);
             }
 
-            if (req.files["audio"]) {
-                const audioFile = req.files["audio"][0].path;
-                label.audioUrl = audioFile;
+            if (req.files && req.files["audio"]) {
+                const audioFile = req.files["audio"][0];
+                const audioKey = `labels/${label.customer_id}/${Date.now()}_audio.${audioFile.originalname.split(".").pop()}`;
+
+                await s3Client.send(
+                    new PutObjectCommand({
+                        Bucket: process.env.S3_BUCKET_NAME,
+                        Key: audioKey,
+                        Body: audioFile.buffer,
+                        ContentType: audioFile.mimetype,
+                    })
+                );
+
+                const audioUrl = `https://${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${audioKey}`;
+
+                await db.query("DELETE FROM label_audio WHERE label_id = ?", [labelId]);
+                await db.query("INSERT INTO label_audio (label_id, audio_url) VALUES (?, ?)", [labelId, audioUrl]);
             }
 
             const sql = "UPDATE `label` SET label_name = ?, type = ?, textDescription = ?, isPrivate = ? WHERE label_id = ?";
