@@ -34,6 +34,26 @@ MoveOut is a web application designed to manage customer labels, including featu
 
 -   The .env-files are part of the git uploads so you don't have to create new ones.
 
+-   **FIRST ADMIN**
+    There is no function promoting the first admin. To promote your first admin you'll have to register as a regular user and then:
+
+```bash
+        mariadb moveout
+        UPDATE customer SET role='admin' WHERE `customer_id` = #YourCustomerId
+```
+
+-   \*\*OR
+
+```bash
+        UPDATE customer SET role='admin' WHERE `mail` = '#YourMail'
+```
+
+-   If you are unsure of your customer_id or mail you can check with
+```bash
+        SELECT * FROM customer;
+```
+    and look for your customer details in the provided list of customers if any.
+
 -   **SETUP BACKEND**
 
 ```bash
