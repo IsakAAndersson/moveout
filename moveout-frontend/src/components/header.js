@@ -25,14 +25,18 @@ function Header() {
                     Home
                 </Link>{" "}
                 |
-                <Link to="/labels" className="header-link">
-                    Labels
-                </Link>{" "}
-                |
-                <Link to="/create-label" className="header-link">
-                    Create Label
-                </Link>{" "}
-                |
+                {userRole === "user" || userRole === "admin" ? (
+                    <>
+                        <Link to="/labels" className="header-link">
+                            Labels
+                        </Link>{" "}
+                        |
+                        <Link to="/create-label" className="header-link">
+                            Create Label
+                        </Link>{" "}
+                        |
+                    </>
+                ) : null}
                 {!userRole && (
                     <>
                         <Link to="/login" className="header-link">
@@ -46,12 +50,12 @@ function Header() {
                 )}
                 {userRole === "user" && (
                     <Link to="/profile" className="header-link">
-                        Profile
+                        Profile |
                     </Link>
                 )}
                 {userRole === "admin" && (
                     <Link to="/admin" className="header-link">
-                        Admin
+                        Admin |
                     </Link>
                 )}
                 {userRole && (

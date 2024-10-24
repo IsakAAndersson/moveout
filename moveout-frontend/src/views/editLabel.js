@@ -70,6 +70,14 @@ export default function EditLabel() {
         }
     };
 
+    const stopCamera = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.stop()); // Stop all tracks in the mediaStream
+            videoRef.current.srcObject = null;
+            videoRef.current.style.display = "none";
+        }
+    };
+
     const takePhoto = () => {
         const canvas = document.createElement("canvas");
         canvas.width = videoRef.current.videoWidth;
@@ -82,6 +90,7 @@ export default function EditLabel() {
             } else {
                 alert("You can only upload up to 5 images.");
             }
+            stopCamera();
         }, "image/jpeg");
     };
 

@@ -67,6 +67,14 @@ export default function CreateLabel() {
         }
     };
 
+    const stopCamera = () => {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((track) => track.stop()); // Stop all tracks in the mediaStream
+            videoRef.current.srcObject = null;
+            videoRef.current.style.display = "none";
+        }
+    };
+
     const takePhoto = () => {
         const canvas = document.createElement("canvas");
         canvas.width = videoRef.current.videoWidth;
@@ -75,6 +83,7 @@ export default function CreateLabel() {
         canvas.toBlob((blob) => {
             const newImages = [...images, new File([blob], "photo.jpg", { type: "image/jpeg" })];
             setImages(newImages);
+            stopCamera();
         }, "image/jpeg");
     };
 
