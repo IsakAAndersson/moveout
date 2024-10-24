@@ -98,6 +98,7 @@ app.post("/api/register", async (req, res) => {
                 console.error("Error sending verification email:", error);
             } else {
                 console.log("Verification email sent:", info.response);
+                console.log("Mail sent to: ", mail);
             }
         });
 
