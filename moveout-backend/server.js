@@ -677,7 +677,7 @@ app.post("/api/marketing-mail", async (req, res) => {
 
     const users = await db.query("SELECT mail FROM customer WHERE status = 'verified' AND role = 'user'");
 
-    if (users) {
+    if (users.length > 0) {
         try {
             console.log("users: ", users);
 
@@ -708,6 +708,8 @@ app.post("/api/marketing-mail", async (req, res) => {
             console.error("Error sending marketing emails:", error);
             res.status(500).json({ error: "Failed to send marketing emails" });
         }
+    } else {
+        return res.status(204).send();
     }
 });
 

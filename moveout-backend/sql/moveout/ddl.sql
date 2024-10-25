@@ -2,12 +2,15 @@
 -- ddl for MoveOut
 --
 
+DELETE FROM `label_images`;
+DELETE FROM `label_audio`;
+DELETE FROM `verification_tokens`;
 DELETE FROM `label`;
 DELETE FROM `customer`;
 
 DROP TABLE IF EXISTS `label_images`;
 DROP TABLE IF EXISTS `label_audio`;
-DROP TABLE IF EXISTS `verification_tokens`
+DROP TABLE IF EXISTS `verification_tokens`;
 DROP TABLE IF EXISTS `customer`;
 DROP TABLE IF EXISTS `label`;
 
