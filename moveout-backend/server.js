@@ -672,4 +672,43 @@ app.post("/api/delete-images/:labelId", async (req, res) => {
     }
 });
 
+app.post("/api/marketing-mail", async (req, res) => {
+    const { subject, content } = req.body;
+
+    const users = await db.query("SELECT mail FROM customer WHERE status = 'verified' AND role = 'user'");
+
+    if (users) {
+        try {
+            console.log("users: ", users);
+
+            const transporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: {
+                    user: "isar23moveout@gmail.com",
+                    pass: emailPassword,
+                },
+            });
+
+            for (const user of users) {
+                const mailOptions = {
+                    from: "isar23moveout@gmail.com",
+                    to: user.mail,
+                    subject,
+                    text: content,
+                };
+
+                await transporter.sendMail(mailOptions);
+            }
+
+            return res.status(201).send({
+                success: true,
+                message: "Marketing mail sent successfully!",
+            });
+        } catch (error) {
+            console.error("Error sending marketing emails:", error);
+            res.status(500).json({ error: "Failed to send marketing emails" });
+        }
+    }
+});
+
 export default app;

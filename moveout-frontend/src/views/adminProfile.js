@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 
 export default function AdminProfile() {
     const [customers, setCustomers] = useState([]);
     const [message, setMessage] = useState("");
+    const [subject, setSubject] = useState("");
+    const [content, setContent] = useState("");
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchCustomers();
@@ -38,9 +42,33 @@ export default function AdminProfile() {
         }
     };
 
+    const marketingMail = async () => {
+        try {
+            const response = await axios.post("/api/marketing-mail", {
+                subject,
+                content,
+            });
+
+            if (response.data.success) {
+                navigate("/", { state: { message: response.data.message } });
+            } else {
+                setMessage(response.data.message);
+            }
+        } catch (error) {
+            console.error("Error sending marketing mail:", error);
+            setMessage(error.response?.data?.message || "Failed to send marketing mail.");
+        }
+    };
+
     return (
         <div>
             <h2>Admin Profile</h2>
+            <div>
+                <h3>Send Marketing Email</h3>
+                <input type="text" placeholder="Email Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />
+                <textarea placeholder="Email Content" value={content} onChange={(e) => setContent(e.target.value)} />
+                <button onClick={marketingMail}>Send Marketing Email</button>
+            </div>
             <ul>
                 {customers.map((customer) => (
                     <li key={customer.customer_id}>
