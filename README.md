@@ -117,6 +117,10 @@ source reset.sql;
     npm -v #(Check npm)
 ```
 
+### Testing
+
+-   Testing can be done by using the website. This is the only way I have tested it.
+
 ### Clone the Repository
 
 -   1. Clone the repository from GitHub:
