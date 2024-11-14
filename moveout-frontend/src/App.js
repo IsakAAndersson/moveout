@@ -14,6 +14,7 @@ import Logout from "./views/logout";
 import LabelDescription from "./views/labelDescription";
 import DeleteLabel from "./views/deleteLabel";
 import EditLabel from "./views/editLabel";
+import GoogleLoginCallback from "./views/googleLoginCallback";
 
 function App() {
     return (
@@ -33,6 +34,7 @@ function App() {
                     <Route path="/description/:labelId" element={<LabelDescription />} />
                     <Route path="/deleteLabel/:labelId/:labelName" element={<DeleteLabel />} />
                     <Route path="/editLabel/:labelId/" element={<EditLabel />} />
+                    <Route path="/google-login-callback" element={<GoogleLoginCallback />} />
                 </Routes>
             </Layout>
         </Router>

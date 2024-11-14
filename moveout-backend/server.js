@@ -11,6 +11,7 @@ import { verifyToken, logIncomingToConsole } from "./middleware/index.js";
 import moveOut from "./src/moveout.js";
 import db from "./src/db.js";
 import config from "./config/mo/config.json" assert { type: "json" };
+import authRoutes from "./src/authRoutes.js";
 
 dotenv.config();
 
@@ -37,6 +38,7 @@ app.use(
 );
 app.use(logIncomingToConsole);
 app.use(express.json());
+app.use("/api", authRoutes);
 
 app.listen(config.server.port, () => {
     console.log(`Server running on port ${config.server.port}`);

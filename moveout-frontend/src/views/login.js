@@ -8,6 +8,10 @@ export default function Login() {
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
+    const handleGoogleLogin = () => {
+        window.location.href = `${process.env.REACT_APP_API_URL}/auth/google`;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError("");
@@ -54,6 +58,9 @@ export default function Login() {
                 </div>
                 <button type="submit" className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                     Login
+                </button>
+                <button onClick={handleGoogleLogin} className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 mt-4">
+                    Login with Google
                 </button>
             </form>
         </div>
