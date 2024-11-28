@@ -22,17 +22,20 @@ function Home() {
     return (
         <div className="home-container">
             {notification && (
-                <div className="notification" style={{
-                    position: 'fixed',
-                    top: '20px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    backgroundColor: '#4CAF50',
-                    color: 'white',
-                    padding: '15px',
-                    borderRadius: '5px',
-                    zIndex: 1000
-                }}>
+                <div
+                    className="notification"
+                    style={{
+                        position: "fixed",
+                        top: "20px",
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        backgroundColor: "#4CAF50",
+                        color: "white",
+                        padding: "15px",
+                        borderRadius: "5px",
+                        zIndex: 1000,
+                    }}
+                >
                     {notification}
                 </div>
             )}

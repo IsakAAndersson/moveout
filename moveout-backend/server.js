@@ -426,48 +426,57 @@ app.put(
 );
 
 // Delete label
-app.post("/api/delete/label/:labelId", async (req, res) => {
+app.post("/api/label/:labelId/action", async (req, res) => {
     const { labelId } = req.params;
+    const { action } = req.body;
 
     try {
-        const [images] = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [labelId]);
-        const [audio] = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [labelId]);
+        if (action === "softDelete") {
+            const [images] = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [labelId]);
+            const [audio] = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [labelId]);
 
-        if (images && images.length > 0) {
-            for (const image of images) {
-                const imageUrl = image.image_url;
-                const key = imageUrl.split(`${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`)[1];
+            if (images && images.length > 0) {
+                for (const image of images) {
+                    const imageUrl = image.image_url;
+                    const key = imageUrl.split(`${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`)[1];
+
+                    await s3Client.send(
+                        new DeleteObjectCommand({
+                            Bucket: process.env.S3_BUCKET_NAME,
+                            Key: key,
+                        })
+                    );
+                }
+            } else {
+                console.log("No images found for labelId:", labelId);
+            }
+
+            if (audio && audio.length > 0) {
+                const audioUrl = audio[0].audio_url;
+                const audioKey = audioUrl.split(`${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`)[1];
 
                 await s3Client.send(
                     new DeleteObjectCommand({
                         Bucket: process.env.S3_BUCKET_NAME,
-                        Key: key,
+                        Key: audioKey,
                     })
                 );
+            } else {
+                console.log("No audio found for labelId:", labelId);
             }
-        } else {
-            console.log("No images found for labelId:", labelId);
+
+            await db.query("UPDATE label SET status = 'deleted' WHERE label_id = ?", [labelId]);
+
+            return res.status(200).send({ message: "Label and associated media deleted successfully!" });
+        } else if (action === "restore") {
+            await db.query("UPDATE label SET status = 'active' WHERE label_id = ?", [labelId]);
+
+            return res.status(200).send({ message: "Label restored successfully" });
         }
 
-        if (audio && audio.length > 0) {
-            const audioUrl = audio[0].audio_url;
-            const audioKey = audioUrl.split(`${process.env.S3_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/`)[1];
-
-            await s3Client.send(
-                new DeleteObjectCommand({
-                    Bucket: process.env.S3_BUCKET_NAME,
-                    Key: audioKey,
-                })
-            );
-        } else {
-            console.log("No audio found for labelId:", labelId);
-        }
-
-        await db.query("UPDATE label SET status = 'deleted' WHERE label_id = ?", [labelId]);
-
-        return res.status(200).send({ message: "Label and associated media deleted successfully!" });
+        return res.status(400).send({ message: "Invalid action" });
     } catch (err) {
-        console.error("Error deleting label and media:", err);
+        console.error("Error deleting/restoring label:", err);
         return res.status(500).send({ message: "Database or S3 error occurred" });
     }
 });

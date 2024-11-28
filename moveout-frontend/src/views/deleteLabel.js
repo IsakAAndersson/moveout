@@ -8,7 +8,7 @@ const DeleteLabel = () => {
 
     const handleDelete = async () => {
         try {
-            await axios.post(`/api/delete/label/${labelId}`);
+            await axios.post(`/api/label/${labelId}/action`, { action: "softDelete" });
             navigate("/labels");
         } catch (error) {
             console.error("Error deleting label:", error);
