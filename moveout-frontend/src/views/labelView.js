@@ -5,6 +5,8 @@ import axios from "axios";
 const LabelView = () => {
     const [labels, setLabels] = useState([]);
     const [errorMessage, setErrorMessage] = useState("");
+    const [showEmailInput, setShowEmailInput] = useState(null);
+    const [recipientEmail, setRecipientEmail] = useState("");
     const apiUrl = process.env.REACT_APP_API_URL || "/api";
     const userRole = localStorage.getItem("userRole");
     const userId = localStorage.getItem("customerId");
@@ -32,15 +34,30 @@ const LabelView = () => {
         fetchLabels();
     }, [fetchLabels]);
 
-    /*const handleDelete = async (labelId) => {
-        try {
-            await axios.post(`${apiUrl}/delete/label/${labelId}`);
-            setLabels(labels.filter((label) => label.label_id !== labelId));
-        } catch (error) {
-            console.error("Error deleting label:", error);
-            setErrorMessage("Failed to delete label. Please try again later.");
+    const handleShare = async (label) => {
+        if (!recipientEmail) {
+            setErrorMessage("Email address is required to share the label.");
+            return;
         }
-    };*/
+
+        try {
+            const sharePayload = {
+                mail: recipientEmail,
+                labelId: label.label_id,
+                isPrivate: label.isPrivate,
+                pin: label.pin,
+            };
+
+            await axios.post(`${apiUrl}/share-label`, sharePayload);
+
+            alert("Label shared successfully!");
+            setShowEmailInput(null);
+            setRecipientEmail("");
+        } catch (error) {
+            console.error("Error sharing label:", error);
+            setErrorMessage("Failed to share label. Please try again later.");
+        }
+    };
 
     return (
         <div>
@@ -63,7 +80,21 @@ const LabelView = () => {
                                 <Link to={`/deleteLabel/${label.label_id}/${label.label_name}`}>
                                     <button className="ml-2 bg-red-500 text-white py-1 px-2 rounded">Delete Label</button>
                                 </Link>
+                                <button onClick={() => setShowEmailInput(label.label_id)} className="ml-2 bg-green-500 text-white py-1 px-2 rounded">
+                                    Share Label
+                                </button>
                             </div>
+                            {showEmailInput === label.label_id && (
+                                <div className="mt-2">
+                                    <input type="email" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} placeholder="Enter recipient's email" className="border border-gray-400 px-2 py-1 rounded" />
+                                    <button onClick={() => handleShare(label)} className="ml-2 bg-green-500 text-white py-1 px-2 rounded">
+                                        Confirm Share
+                                    </button>
+                                    <button onClick={() => setShowEmailInput(null)} className="ml-2 bg-gray-500 text-white py-1 px-2 rounded">
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
                         </li>
                     ))}
                 </ul>

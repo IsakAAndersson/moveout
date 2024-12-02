@@ -1,9 +1,21 @@
 import db from "./db.js";
 import bcrypt from "bcrypt";
 import multer from "multer";
+import dotenv from "dotenv";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+dotenv.config();
+
+const s3Client = new S3Client({
+    region: process.env.AWS_REGION, // Exempel: "us-east-1"
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    },
+});
 
 /*
     Hämta alla kunder från databasen.
@@ -239,6 +251,58 @@ async function getCustomerByLabelId(labelId) {
     return res[0].customer_id;
 }
 
+async function deleteS3File(bucketName, fileKey) {
+    try {
+        const command = new DeleteObjectCommand({
+            Bucket: bucketName,
+            Key: fileKey,
+        });
+        const response = await s3Client.send(command);
+        console.log(`Deleted file: ${fileKey} from bucket: ${bucketName}`, response);
+    } catch (error) {
+        console.error(`Failed to delete file: ${fileKey} - Error:`, error);
+    }
+}
+
+async function deleteS3Folder(bucketName, folderPrefix) {
+    try {
+        console.log(`Starting deletion for folder: ${folderPrefix} in bucket: ${bucketName}`);
+        let isTruncated = true;
+        let continuationToken = null;
+
+        while (isTruncated) {
+            const listCommand = new ListObjectsV2Command({
+                Bucket: bucketName,
+                Prefix: folderPrefix,
+                ContinuationToken: continuationToken,
+            });
+            const listResponse = await s3Client.send(listCommand);
+
+            const objects = listResponse.Contents;
+
+            if (objects && objects.length > 0) {
+                const deleteCommand = new DeleteObjectsCommand({
+                    Bucket: bucketName,
+                    Delete: {
+                        Objects: objects.map((obj) => ({ Key: obj.Key })),
+                    },
+                });
+
+                await s3Client.send(deleteCommand);
+                console.log(`Deleted ${objects.length} objects from folder: ${folderPrefix}`);
+            }
+
+            isTruncated = listResponse.IsTruncated;
+            continuationToken = listResponse.NextContinuationToken;
+        }
+
+        console.log(`Folder deleted successfully: ${folderPrefix}`);
+    } catch (error) {
+        console.error(`Error deleting folder: ${folderPrefix}`, error);
+        throw error;
+    }
+}
+
 export default {
     getAllCustomers,
     getCustomerById,
@@ -255,4 +319,6 @@ export default {
     promoteToAdmin,
     getAllPublicLabels,
     getCustomerByLabelId,
+    deleteS3File,
+    deleteS3Folder,
 };

@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import multer from "multer";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -558,19 +558,7 @@ app.get("/api/customers/:id/labels", async (req, res) => {
     }
 });
 
-/*
-app.post("/api/customers", async (req, res) => {
-    const { mail, status } = req.body;
-    try {
-        const newCustomer = await moveOut.createCustomer(mail, status);
-        res.status(201).json(newCustomer);
-    } catch (error) {
-        res.status(500).json({ message: "Error creating customer", error });
-    }
-});*/
-
-//
-
+//description label
 app.post("/api/labels/:labelId/description", upload.single("file"), async (req, res) => {
     const { labelId } = req.params;
     const { description } = req.body;
@@ -585,6 +573,7 @@ app.post("/api/labels/:labelId/description", upload.single("file"), async (req, 
     }
 });
 
+//Label get
 app.get("/api/labels/:labelId", async (req, res) => {
     const { labelId } = req.params;
 
@@ -612,6 +601,7 @@ app.get("/api/labels/:labelId", async (req, res) => {
     }
 });
 
+//Promote admin
 app.post("/api/promote-to-admin/:customerId", async (req, res) => {
     const { customerId } = req.params;
 
@@ -635,6 +625,7 @@ app.post("/api/promote-to-admin/:customerId", async (req, res) => {
     }
 });
 
+//Deactivate customer
 app.post("/api/deactivate-customer/:customerId", async (req, res) => {
     const { customerId } = req.params;
 
@@ -658,6 +649,31 @@ app.post("/api/deactivate-customer/:customerId", async (req, res) => {
     }
 });
 
+//activate customer
+app.post("/api/activate-customer/:customerId", async (req, res) => {
+    const { customerId } = req.params;
+
+    if (!customerId) {
+        return res.status(400).json({ error: "Customer ID is required" });
+    }
+
+    try {
+        await db.query("UPDATE customer SET `status` = 'verified' WHERE `customer_id` = ?", [customerId]);
+
+        const customer = await moveOut.getCustomerById(customerId);
+
+        if (customer && customer.status === "verified") {
+            return res.status(200).json({ message: `Customer ${customerId} successfully activated` });
+        } else {
+            return res.status(500).json({ error: "Failed to activate customer" });
+        }
+    } catch (error) {
+        console.error("Error activating customer:", error);
+        res.status(500).json({ error: "An error occurred while activating the customer" });
+    }
+});
+
+//Public labels get
 app.get("/api/public/labels/:customerId", async (req, res) => {
     try {
         const customerId = req.params.customerId;
@@ -669,6 +685,7 @@ app.get("/api/public/labels/:customerId", async (req, res) => {
     }
 });
 
+//delete images
 app.post("/api/delete-images/:labelId", async (req, res) => {
     const labelId = req.params.labelId;
     console.log("delete-images - Label ID: ", labelId);
@@ -683,6 +700,7 @@ app.post("/api/delete-images/:labelId", async (req, res) => {
     }
 });
 
+//Marketing mail
 app.post("/api/marketing-mail", async (req, res) => {
     const { subject, content } = req.body;
 
@@ -721,6 +739,240 @@ app.post("/api/marketing-mail", async (req, res) => {
         }
     } else {
         return res.status(204).send();
+    }
+});
+
+//share label
+app.post("/api/share-label", async (req, res) => {
+    const { mail, labelId } = req.body;
+
+    if (!mail || !labelId) {
+        return res.status(400).send({ message: "Mail address and label ID are required." });
+    }
+
+    try {
+        const [label] = await db.query("SELECT * FROM label WHERE label_id = ?", [labelId]);
+
+        const [user] = await db.query("SELECT mail FROM customer WHERE customer_id = ?", [label.customer_id]);
+
+        if (!label) {
+            return res.status(404).send({ message: "Label not found." });
+        }
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found." });
+        }
+
+        console.log("Share label user: ", user);
+        const labelLink = `${process.env.FRONTEND_URL}/label/${label.customer_id}/${label.label_id}`;
+        let emailContent = `Hello,\n\nHere is the link to the shared label made by ${user.mail}:\n ${labelLink}\n`;
+
+        if (label.isPrivate === "private" && label.pin) {
+            emailContent += `PIN Code: ${label.pin}\n`;
+        }
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "isar23moveout@gmail.com",
+                pass: emailPassword,
+            },
+        });
+
+        const mailOptions = {
+            from: "isar23moveout@gmail.com",
+            to: mail,
+            subject: "Shared Label Information",
+            text: emailContent,
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error sending label email:", error);
+                return res.status(500).send({ message: "Failed to send email." });
+            } else {
+                console.log("Label email sent:", info.response);
+                return res.status(200).send({ message: "Label shared successfully." });
+            }
+        });
+    } catch (error) {
+        console.error("Error during label sharing:", error);
+        return res.status(500).send({ message: "Server error." });
+    }
+});
+
+//Delete account
+/*
+app.post("/api/delete-account", async (req, res) => {
+    const { token, email } = req.body;
+
+    try {
+        const [verification] = await db.query("SELECT * FROM verification_tokens WHERE token = ? AND mail = ? AND expiration_date > NOW()", [token, email]);
+
+        if (!verification) {
+            return res.status(400).send({ message: "Invalid or expired token." });
+        }
+
+        const [user] = await db.query("SELECT customer_id FROM customer WHERE mail = ?", [email]);
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found." });
+        }
+
+        const labels = await db.query("SELECT label_id FROM label WHERE customer_id = ?", [user.customer_id]);
+
+        for (const { label_id } of labels) {
+            const images = await db.query("SELECT image_url FROM label_images WHERE label_id = ?", [label_id]);
+            const audios = await db.query("SELECT audio_url FROM label_audio WHERE label_id = ?", [label_id]);
+
+            for (const { image_url } of images) {
+                const fileKey = image_url.split("/").pop();
+                await deleteS3File(process.env.S3_BUCKET_NAME, fileKey);
+            }
+
+            for (const { audio_url } of audios) {
+                const fileKey = audio_url.split("/").pop();
+                await deleteS3File(process.env.S3_BUCKET_NAME, fileKey);
+            }
+        }
+
+        await db.query("DELETE FROM label WHERE customer_id = ?", [user.customer_id]);
+        await db.query("DELETE FROM customer WHERE mail = ?", [email]);
+        await db.query("DELETE FROM verification_tokens WHERE mail = ?", [email]);
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "isar23moveout@gmail.com",
+                pass: emailPassword,
+            },
+        });
+
+        const mailOptions = {
+            from: "isar23moveout@gmail.com",
+            to: email,
+            subject: "Account Deleted",
+            text: "Your account and all associated data have been successfully deleted.",
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error sending account deleted email:", error);
+            } else {
+                console.log("Account deleted email sent:", info.response);
+            }
+        });
+
+        res.status(200).send({ message: "Account deleted successfully." });
+    } catch (error) {
+        console.error("Error during account deletion:", error);
+        res.status(500).send({ message: "Server error." });
+    }
+});
+*/
+
+app.post("/api/delete-account", async (req, res) => {
+    const { token, email } = req.body;
+
+    try {
+        const [verification] = await db.query("SELECT * FROM verification_tokens WHERE token = ? AND mail = ? AND expiration_date > NOW()", [token, email]);
+        if (!verification) {
+            return res.status(400).send({ message: "Invalid or expired token." });
+        }
+
+        const [user] = await db.query("SELECT customer_id FROM customer WHERE mail = ?", [email]);
+        if (!user) {
+            return res.status(404).send({ message: "User not found." });
+        }
+
+        const customerId = user.customer_id;
+
+        const bucketName = process.env.S3_BUCKET_NAME;
+        const folderPrefix = `${customerId}`;
+
+        await moveOut.deleteS3Folder(bucketName, folderPrefix);
+
+        await db.query("DELETE FROM label WHERE customer_id = ?", [customerId]);
+        await db.query("DELETE FROM customer WHERE mail = ?", [email]);
+        await db.query("DELETE FROM verification_tokens WHERE mail = ?", [email]);
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "isar23moveout@gmail.com",
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
+        const mailOptions = {
+            from: "isar23moveout@gmail.com",
+            to: email,
+            subject: "Account Deleted",
+            text: "Your account and all associated data have been successfully deleted.",
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error sending account deleted email:", error);
+            } else {
+                console.log("Account deleted email sent:", info.response);
+            }
+        });
+
+        res.status(200).send({ message: "Account deleted successfully." });
+    } catch (error) {
+        console.error("Error during account deletion:", error);
+        res.status(500).send({ message: "Server error." });
+    }
+});
+
+app.post("/api/request-delete-account", async (req, res) => {
+    const { userId } = req.body;
+
+    console.log("Req.body: ", req.body);
+
+    try {
+        const [user] = await db.query("SELECT mail FROM customer WHERE customer_id = ?", [userId]);
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found." });
+        }
+
+        const verificationToken = crypto.randomBytes(32).toString("hex");
+        const expirationDate = new Date();
+        expirationDate.setDate(expirationDate.getDate() + 14);
+
+        await db.query("INSERT INTO verification_tokens (token, mail, expiration_date) VALUES (?, ?, ?)", [verificationToken, user.mail, expirationDate]);
+
+        const deleteLink = `${process.env.FRONTEND_URL}/confirm-delete?token=${verificationToken}&email=${encodeURIComponent(user.mail)}`;
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "isar23moveout@gmail.com",
+                pass: emailPassword,
+            },
+        });
+
+        const mailOptions = {
+            from: "isar23moveout@gmail.com",
+            to: user.mail,
+            subject: "Confirm Account Deletion",
+            text: `Are you sure you want to delete your account? All your labels and media will be permanently deleted. Click this link to confirm: ${deleteLink}`,
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error sending delete email:", error);
+                return res.status(500).send({ message: "Failed to send email." });
+            } else {
+                console.log("Delete confirmation email sent:", info.response);
+                return res.status(200).send({ message: "Delete confirmation email sent." });
+            }
+        });
+    } catch (error) {
+        console.error("Error during delete account request:", error);
+        res.status(500).send({ message: "Server error." });
     }
 });
 

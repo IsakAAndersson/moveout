@@ -69,6 +69,16 @@ export default function AdminProfile() {
         }
     };
 
+    const activateCustomer = async (customerId) => {
+        try {
+            const response = await axios.post(`${process.env.REACT_APP_API_URL}/activate-customer/${customerId}`);
+            setMessage(response.data.message);
+            fetchCustomersAndLabels();
+        } catch (error) {
+            setMessage(error.response?.data?.error || "An error occurred");
+        }
+    };
+
     const marketingMail = async () => {
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/marketing-mail`, {
@@ -102,7 +112,7 @@ export default function AdminProfile() {
                         <div>
                             {customer.mail} - {customer.role}
                             {customer.role !== "admin" && <button onClick={() => promoteToAdmin(customer.customer_id)}>Promote to Admin</button>}
-                            <button onClick={() => deactivateCustomer(customer.customer_id)}>Deactivate</button>
+                            {customer.status === "verified" ? <button onClick={() => deactivateCustomer(customer.customer_id)}>Deactivate</button> : <button onClick={() => activateCustomer(customer.customer_id)}>Activate</button>}
                         </div>
                         <div>
                             <strong>Labels:</strong>
