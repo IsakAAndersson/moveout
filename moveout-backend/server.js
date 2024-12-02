@@ -48,6 +48,74 @@ app.get("/api/protected", verifyToken, (req, res) => {
     res.status(200).send({ message: "This is a protected route", customerId: req.customerId });
 });
 
+app.post("/api/update-password", async (req, res) => {
+    const { customerId, newPassword } = req.body;
+
+    console.log("CustomerId, newPassword: ", customerId, ", ", newPassword);
+
+    if (!customerId || !newPassword) {
+        return res.status(400).send({ message: "Customer ID and new password are required." });
+    }
+
+    try {
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+        if (!passwordRegex.test(newPassword)) {
+            return res.status(400).send({
+                message: "Password must contain at least one lowercase letter, one uppercase letter, one number, one special character, and be at least 8 characters long.",
+            });
+        }
+
+        const checkUserSql = "SELECT mail FROM customer WHERE customer_id = ?";
+        const [user] = await db.query(checkUserSql, [customerId]);
+
+        console.log("User: ", user);
+
+        if (user.length === 0) {
+            return res.status(404).send({ message: "No user found with the provided Customer ID." });
+        }
+
+        const mail = user.mail;
+
+        console.log("Mail: ", mail);
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        const updatePasswordSql = "UPDATE customer SET password = ? WHERE customer_id = ?";
+        await db.query(updatePasswordSql, [hashedPassword, customerId]);
+
+        const transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+                user: "isar23moveout@gmail.com",
+                pass: emailPassword,
+            },
+        });
+
+        const mailOptions = {
+            from: "isar23moveout@gmail.com",
+            to: mail,
+            subject: "Password Change Notification",
+            text: "Your password has been successfully updated. If you did not initiate this change, please contact our support team immediately.",
+        };
+
+        transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error("Error sending email:", error);
+            } else {
+                console.log("Email sent:", info.response);
+            }
+        });
+
+        return res.status(200).send({
+            success: true,
+            message: "Password changed successfully! A notification email has been sent to your registered address.",
+        });
+    } catch (error) {
+        console.error("Error changing password:", error);
+        return res.status(500).send({ success: false, message: "Internal server error." });
+    }
+});
+
 app.post("/api/register", async (req, res) => {
     const { mail, password } = req.body;
     if (!mail || !password) {
@@ -416,6 +484,13 @@ app.put(
 
             const sql = "UPDATE `label` SET label_name = ?, type = ?, textDescription = ?, isPrivate = ? WHERE label_id = ?";
             await db.query(sql, [labelName, type, textDescription, isPrivate, labelId]);
+
+            if (isPrivate === "private" && label.pin === null) {
+                pin = Math.floor(100000 + Math.random() * 900000).toString();
+
+                const sqlPrivate = "UPDATE `label` SET pin = ? WHERE label_id = ?";
+                await db.query(sqlPrivate, [pin, labelId]);
+            }
 
             res.json({ message: "Label updated successfully", label });
         } catch (error) {

@@ -14,9 +14,10 @@ export default function UserProfile() {
         }
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/update-password`, {
-                userId: localStorage.getItem("userId"),
+                customerId: localStorage.getItem("customerId"),
                 newPassword,
             });
+            console.log("customerId", localStorage.getItem("customerId"));
             setMessage(response.data.message);
         } catch (error) {
             setMessage(error.response?.data?.message || "An error occurred");
@@ -44,7 +45,7 @@ export default function UserProfile() {
                 const response = await axios.post(`${process.env.REACT_APP_API_URL}/request-delete-account`, {
                     userId: localStorage.getItem("customerId"),
                 });
-    
+
                 setMessage(response.data.message || "A confirmation email has been sent to your email address.");
                 localStorage.clear();
                 alert("A confirmation email has been sent to your email address.");
@@ -54,7 +55,6 @@ export default function UserProfile() {
             }
         }
     };
-    
 
     return (
         <div>
